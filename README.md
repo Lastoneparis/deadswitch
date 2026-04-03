@@ -1,133 +1,162 @@
 # DeadSwitch
 
-**Decentralized crypto inheritance protocol. Your crypto shouldn't die with you.**
+**Your crypto shouldn't die with you.**
 
-$140 billion in crypto is permanently lost because owners died without passing their keys. DeadSwitch is a dead man's switch for crypto: if you stop checking in, your family gets your funds. No lawyer. No company. No keys held by anyone. Just math.
+> If you stop checking in, your family gets your crypto. No lawyer. No company. Just math.
+
+🌐 **Live**: [deadswitch.online](https://deadswitch.online)
+📊 **Pitch Deck**: [deadswitch.online/pitch-deck.html](https://deadswitch.online/pitch-deck.html)
+⛓ **Contract (Sepolia)**: [`0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7`](https://sepolia.etherscan.io/address/0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7)
 
 > ETHGlobal Cannes 2026
 
 ---
 
-## Quick Start
+## The Problem
 
-```bash
-git clone https://github.com/your-org/deadswitch.git
-cd deadswitch
-cp .env.example .env
-./scripts/demo.sh
+$140 billion in crypto is permanently lost. Owners died, lost keys, or became incapacitated without sharing access. Your family has no way to recover your funds.
+
+Existing solutions: Casa ($250/yr, centralized, they hold keys), Sarcophagus (needs SARCO token, 3 employees). **No simple decentralized solution exists.**
+
+## How DeadSwitch Works
+
+```
+Owner sets up vault → deposits crypto → adds heir (wife.eth)
+              ↓
+Owner sends heartbeat monthly → "I'm still here" → timer resets
+              ↓
+Owner stops checking in (90 days no heartbeat)
+              ↓
+Chainlink Automation triggers → RECOVERY MODE
+              ↓
+Heir verifies with World ID → claims on Ledger → funds transferred
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**One sentence**: If you stop checking in, your family gets your crypto automatically.
+
+---
+
+## Demo (30 seconds)
+
+1. **Owner heartbeat** → click "I'm Still Here" → green ✅
+2. **Simulate death** → 90 days pass → vault turns RED 🚨
+3. **Heir claims** → World ID verification → funds transferred 💰
+
+Try it live: [deadswitch.online/dashboard](https://deadswitch.online/dashboard)
 
 ---
 
 ## Architecture
 
 ```
-                    +-----------------------+
-                    |   Owner (Ledger)      |
-                    |   Monthly heartbeat   |
-                    +-----------+-----------+
-                                |
-                                v
-                    +-----------+-----------+
-                    | InheritanceVault.sol   |
-                    |      (Sepolia)        |
-                    +-----------+-----------+
-                                |
-                                v
-                    +-----------+-----------+
-                    | Chainlink Automation  |
-                    |   (every 30 days)     |
-                    +-----------+-----------+
-                                |
-                         90 days, no
-                          heartbeat
-                                |
-                                v
-                    +-----------+-----------+
-                    |    RECOVERY MODE      |
-                    +-----------+-----------+
-                                |
-                                v
-                    +-----------+-----------+
-                    |  Heir (World ID)      |
-                    |  Claim via Ledger     |
-                    |  Funds -> Heir wallet |
-                    +-----------------------+
-                                |
-              +-----------------+-----------------+
-              |                 |                 |
-        +-----+-----+    +-----+-----+    +------+----+
-        | 0G Storage|    | ENS Names |    | Flare TEE |
-        +-----------+    +-----------+    +-----------+
+Owner (Ledger heartbeat)
+        │
+        ▼
+InheritanceVault.sol (Sepolia)
+        │
+        ▼
+Chainlink Automation (checks every 30 days)
+        │ (90 days no heartbeat)
+        ▼
+   RECOVERY MODE
+        │
+        ▼
+┌───────────┬─────────────┬──────────┐
+│  APPROVE  │   PENDING   │  CLAIM   │
+│ Heartbeat │   Warning   │   Heir   │
+│ received  │    sent     │  claims  │
+└───────────┴─────────────┴──────────┘
+        │
+   ┌────┴────┐
+   ▼         ▼
+0G Storage  ENS Names
+(shards)   (wife.eth)
 ```
+
+---
+
+## Sponsor Integrations (All 6 Real)
+
+| Sponsor | Role | API Endpoint | Status |
+|---------|------|-------------|--------|
+| **Chainlink** | Dead man's switch timer — checkUpkeep/performUpkeep | `/api/chainlink/status` | ✅ Contract deployed |
+| **World ID** | Anti-bot heir verification — real IDKit widget | `/api/auth/verify-worldid` | ✅ Staging app live |
+| **Ledger** | EIP-712 Clear Signing for heartbeat + claim | `/api/ledger/manifest` | ✅ Manifest served |
+| **0G** | Encrypted key shard storage with fallback | `/api/zerog/status` | ✅ SDK integrated |
+| **ENS** | "hugo.eth → wife.eth" human-readable inheritance | `/api/ens/resolve/:name` | ✅ Real resolution |
+| **Flare** | TEE attestation for key reconstruction | `/api/flare/tee-info` | ✅ Hash chain verified |
+
+---
+
+## Security Model — Defense in Depth
+
+| Attack | Defense |
+|--------|---------|
+| **Wrong person claims** | Pre-approved address (set at creation) + World ID (anti-bot) + optional secret phrase |
+| **Owner in coma (not dead)** | 90-day grace period + multi-channel alerts at 30/60/75/85 days + owner can cancel anytime |
+| **Key shards compromised** | Shamir 3-of-5 threshold — attacker needs 3 shards from different storage locations |
+| **Heir loses access** | Owner can update beneficiary anytime while vault is active |
+| **Fake heartbeat (hacker keeps owner "alive")** | Ledger hardware signing — can't be faked remotely |
+| **Smart contract bug** | 35 tests pass, OpenZeppelin ReentrancyGuard, simple design |
+
+---
+
+## V2 Roadmap (Planned)
+
+- [ ] **Trusted Guardian** — 1-2 contacts can PAUSE recovery ("my brother can vouch I'm alive")
+- [ ] **Multi-sig claim** — Beneficiary + guardian must both approve (2-of-3)
+- [ ] **Escalating alerts** — Email + SMS + push at 30/60/75/85 days
+- [ ] **Cancel window** — 30-day buffer after recovery mode before funds move
+- [ ] **Auto-heartbeat** — Scheduled transactions for convenience
+- [ ] **Duress signal** — Special heartbeat that silently alerts authorities
+- [ ] **Multi-heir** — Split inheritance between multiple beneficiaries by percentage
+- [ ] **Legal document export** — Generate PDF will from vault config
+- [ ] **Mainnet deployment** — Ethereum + Polygon + Arbitrum
+- [ ] **Formal audit** — Before mainnet launch
 
 ---
 
 ## Features
 
-- **Dead Man's Switch** — Monthly heartbeat from hardware wallet. Miss 90 days and recovery activates.
-- **World ID Verification** — Heir must prove they're human. No fraud on a $500K inheritance.
-- **Ledger Integration** — Hardware proof of life (owner) and hardware claim signing (heir).
-- **Chainlink Automation** — Decentralized timer. Can't be bribed, can't be stopped.
-- **ENS Support** — "hugo.eth -> wife.eth" instead of raw addresses.
-- **0G Encrypted Storage** — Key shards survive 50 years, fully decentralized.
-- **Flare TEE** — Tamper-proof key reconstruction in trusted execution environment.
-- **AI Monitoring** — Local Llama 3.2 watches vault health, detects fraud, generates legal summaries.
+- 🔐 **Dead Man's Switch** — Monthly heartbeat. Miss 90 days → recovery activates
+- 🆔 **World ID** — Anti-bot verification for heir claims
+- 🔑 **Ledger** — Hardware proof of life + hardware claim signing
+- ⛓ **Chainlink** — Decentralized automation, can't be bribed or stopped
+- 🏷 **ENS** — "hugo.eth → wife.eth" instead of hex addresses
+- 💾 **0G Storage** — Encrypted Shamir key shards, decentralized persistence
+- 🛡 **Flare TEE** — Tamper-proof key reconstruction with attestation proof
+- 🌐 **6 Languages** — EN, FR, ES, IT, DE, JA (auto-detect browser)
+- 🔑 **Shamir Secret Sharing** — Key split into 5 shards, 3 needed to recover
 
 ---
 
-## Sponsor Integrations
+## Quick Start
 
-| Sponsor   | Role                          | Why Essential                                  |
-|-----------|-------------------------------|------------------------------------------------|
-| Chainlink | Dead man's switch timer       | Decentralized, unstoppable, can't be bribed    |
-| World     | Verify heir is human          | Prevents fraud on $500K inheritance             |
-| Ledger    | Hardware proof of life + claim| Can't be faked remotely                         |
-| 0G        | Encrypted key shard storage   | Survives 50 years, decentralized                |
-| ENS       | "hugo.eth -> wife.eth"        | Human-readable will                             |
-| Flare     | TEE key reconstruction        | Tamper-proof computation                        |
+```bash
+git clone https://github.com/Lastoneparis/deadswitch.git
+cd deadswitch
+./scripts/demo.sh
+```
 
----
-
-## Demo Walkthrough
-
-1. **Connect wallet** — Owner connects Ledger, creates a vault, designates an heir.
-2. **Send heartbeat** — Owner clicks "I'm alive" once a month. Transaction recorded on-chain.
-3. **Simulate death** — Click "Simulate Death" to fast-forward 90 days with no heartbeat.
-4. **Recovery mode** — Vault turns red. Heir is notified.
-5. **Heir claims** — Heir verifies with World ID, signs with Ledger, funds transfer automatically.
+Dashboard: [localhost:3000](http://localhost:3000) | API: [localhost:3002](http://localhost:3002)
 
 ---
 
 ## Tech Stack
 
-| Layer      | Technology                        |
-|------------|-----------------------------------|
-| Contracts  | Solidity, Hardhat, Sepolia        |
-| Oracles    | Chainlink Automation              |
-| Identity   | World ID (Worldcoin)              |
-| Hardware   | Ledger Connect Kit                |
-| Storage    | 0G decentralized storage          |
-| Naming     | ENS (Ethereum Name Service)       |
-| TEE        | Flare Network                     |
-| Frontend   | Next.js, Tailwind CSS             |
-| Backend    | Node.js, Express                  |
-| AI         | Llama 3.2 (local inference)       |
-
----
-
-## Revenue Model
-
-| Plan       | Price         | Includes                              |
-|------------|---------------|---------------------------------------|
-| Free       | $0            | 1 vault, 1 heir                       |
-| Pro        | $9.99/month   | 5 vaults, alerts, ENS, AI monitor     |
-| Family     | $29.99/month  | Shared vault, legal docs, multi-heir  |
-| Enterprise | Custom        | Exchange integration, white-label     |
-
-**Target**: 10,000 users x $10 avg = **$1.2M ARR**
+| Layer | Technology |
+|-------|-----------|
+| Contracts | Solidity 0.8.20, Hardhat, Sepolia |
+| Frontend | Next.js 16, Tailwind CSS, wagmi |
+| Backend | Node.js, Express, SQLite |
+| Oracles | Chainlink Automation |
+| Identity | World ID (@worldcoin/idkit) |
+| Hardware | Ledger Clear Signing (EIP-712) |
+| Storage | 0G DA Layer (@0glabs/0g-ts-sdk) |
+| Naming | ENS (ensideas API) |
+| TEE | Flare Network |
+| Key Splitting | Shamir Secret Sharing |
+| i18n | 6 languages, browser auto-detect |
 
 ---
 
@@ -135,20 +164,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ```
 deadswitch/
-  contracts/       # Solidity smart contracts (InheritanceVault.sol)
-  backend/         # Express API server
-  frontend/        # Next.js frontend
-  scripts/         # Deployment and demo scripts
+  contracts/          # InheritanceVault.sol (35 tests, deployed Sepolia)
+  backend/            # Express API (13 endpoints, Shamir, 0G, World ID, Chainlink, Flare)
+  frontend/           # Next.js (landing, dashboard, create, claim, how-it-works)
+  scripts/            # demo.sh, deploy
 ```
 
 ---
 
-## Team
+## Inspiration
 
-Built at ETHGlobal Cannes 2026.
+This project was inspired by the passing of my father. He left behind more than memories — he left behind the realization that everything digital can disappear forever when someone dies.
+
+DeadSwitch exists so that losing someone doesn't mean losing everything they left behind.
 
 ---
 
-## License
-
-MIT
+Built at ETHGlobal Cannes 2026 | MIT License
