@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 interface HeartbeatButtonProps {
   onPress: () => Promise<void>;
@@ -13,6 +14,7 @@ interface HeartbeatButtonProps {
 export default function HeartbeatButton({ onPress, disabled, warning }: HeartbeatButtonProps) {
   const [pressing, setPressing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const { t } = useI18n();
 
   const handleClick = async () => {
     if (pressing || disabled) return;
@@ -38,7 +40,7 @@ export default function HeartbeatButton({ onPress, disabled, warning }: Heartbea
             exit={{ opacity: 0, y: -30 }}
             className="absolute -top-16 text-success font-bold text-lg"
           >
-            Heartbeat Recorded!
+            {t('heartbeat.recorded')}
           </motion.div>
         )}
       </AnimatePresence>
@@ -65,12 +67,12 @@ export default function HeartbeatButton({ onPress, disabled, warning }: Heartbea
           <Heart size={40} fill="white" />
         </motion.div>
         <span className="text-sm font-semibold tracking-wide uppercase">
-          {pressing ? 'Sending...' : success ? 'Confirmed!' : "I'm Still Here"}
+          {pressing ? t('heartbeat.sending') : success ? t('heartbeat.confirmed') : t('heartbeat.button')}
         </span>
       </motion.button>
 
       <p className="text-sm text-subtle text-center max-w-xs">
-        Press to send your heartbeat and confirm you are still in control of your vault.
+        {t('heartbeat.help')}
       </p>
     </div>
   );

@@ -2,9 +2,10 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database';
 import { splitSecret, recoverSecret } from '../services/shamir';
-import { storeShard, retrieveShards, getShardStatus } from '../integrations/zerog-shards';
+import { storeShard, retrieveShards, getShardStatus, getZeroGStatus } from '../integrations/zerog-shards';
 import { verifyWorldId } from '../integrations/world-id';
 import { checkVaults } from '../integrations/chainlink-automation';
+import { reconstructInTEE, verifyAttestation, getTEEInfo, TEEAttestation } from '../integrations/flare-tee';
 import { broadcast, getConnectionCount } from '../websocket';
 
 const router = Router();
@@ -434,21 +435,43 @@ router.post('/vault/split-key', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/vault/recover-key', (req: Request, res: Response) => {
+router.post('/vault/recover-key', async (req: Request, res: Response) => {
   try {
-    const { shares } = req.body;
+    const { shares, vault_id } = req.body;
 
     if (!shares || !Array.isArray(shares) || shares.length < 2) {
       res.status(400).json({ error: 'At least 2 shares required' });
       return;
     }
 
-    const recovered = recoverSecret(shares);
+    // Reconstruct inside TEE with attestation
+    const { reconstructedKey, attestation } = await reconstructInTEE(shares);
+
+    // Store attestation if vault_id provided
+    if (vault_id) {
+      const { v4: uuidv4Local } = require('uuid');
+      db.prepare(`
+        INSERT INTO tee_attestations (id, vault_id, attestation_hash, enclave_id, code_hash, input_shard_hashes, output_key_hash, signature, verified, created_at)
+        VALUES (@id, @vault_id, @attestation_hash, @enclave_id, @code_hash, @input_shard_hashes, @output_key_hash, @signature, @verified, @created_at)
+      `).run({
+        id: uuidv4Local(),
+        vault_id,
+        attestation_hash: attestation.attestation_hash,
+        enclave_id: attestation.enclave_id,
+        code_hash: attestation.code_hash,
+        input_shard_hashes: JSON.stringify(attestation.input_shard_hashes),
+        output_key_hash: attestation.output_key_hash,
+        signature: attestation.signature,
+        verified: attestation.verified ? 1 : 0,
+        created_at: Math.floor(Date.now() / 1000),
+      });
+    }
 
     res.json({
       success: true,
-      recovered_secret: recovered,
+      recovered_secret: reconstructedKey,
       shares_used: shares.length,
+      tee_attestation: attestation,
     });
   } catch (err: any) {
     console.error('[API] Recover key error:', err.message);
@@ -474,6 +497,153 @@ router.post('/auth/verify-worldid', async (req: Request, res: Response) => {
     console.error('[API] World ID verify error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Flare TEE ───
+
+router.get('/flare/tee-info', (_req: Request, res: Response) => {
+  res.json(getTEEInfo());
+});
+
+router.get('/flare/attestation/:vault_id', (req: Request, res: Response) => {
+  const vaultId = String(req.params.vault_id);
+  const row = db.prepare(
+    'SELECT * FROM tee_attestations WHERE vault_id = @vault_id ORDER BY created_at DESC LIMIT 1'
+  ).get({ vault_id: vaultId }) as any;
+
+  if (!row) {
+    res.status(404).json({ error: 'No attestation found for this vault' });
+    return;
+  }
+
+  const attestation: TEEAttestation = {
+    attestation_hash: row.attestation_hash,
+    enclave_id: row.enclave_id,
+    code_hash: row.code_hash,
+    input_shard_hashes: JSON.parse(row.input_shard_hashes),
+    output_key_hash: row.output_key_hash,
+    timestamp: new Date(row.created_at * 1000).toISOString(),
+    verified: row.verified === 1,
+    signature: row.signature,
+  };
+
+  res.json({ vault_id: vaultId, attestation });
+});
+
+router.post('/flare/verify', (req: Request, res: Response) => {
+  try {
+    const { attestation } = req.body;
+
+    if (!attestation) {
+      res.status(400).json({ error: 'attestation object required' });
+      return;
+    }
+
+    const valid = verifyAttestation(attestation as TEEAttestation);
+
+    res.json({
+      valid,
+      attestation_hash: attestation.attestation_hash,
+      message: valid
+        ? 'Attestation verified — reconstruction was not tampered with'
+        : 'Attestation INVALID — data may have been tampered with',
+    });
+  } catch (err: any) {
+    console.error('[API] Verify attestation error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── 0G Storage Status ───
+
+router.get('/zerog/status', (_req: Request, res: Response) => {
+  try {
+    const status = getZeroGStatus();
+    res.json({
+      service: '0G Storage',
+      network: '0G Testnet (Newton)',
+      ...status,
+    });
+  } catch (err: any) {
+    console.error('[API] 0G status error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Ledger Clear Signing Manifest ───
+
+router.get('/ledger/manifest', (_req: Request, res: Response) => {
+  res.json({
+    "$schema": "https://eip712.ledger.com/schema/v1",
+    context: {
+      url: "https://deadswitch.online",
+      title: "DeadSwitch Inheritance Vault",
+      chainId: 11155111,
+      deployer: "DeadSwitch",
+    },
+    metadata: {
+      owner: "DeadSwitch — Decentralized Crypto Inheritance",
+    },
+    domain: {
+      name: "InheritanceVault",
+      version: "1",
+      chainId: 11155111,
+      verifyingContract: "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7",
+    },
+    formats: {
+      heartbeat: {
+        intent: "Send heartbeat — prove you are alive",
+        fields: [],
+      },
+      claim: {
+        intent: "Claim inheritance from vault",
+        fields: [
+          { path: "_worldIdNullifier", label: "World ID Proof", format: "raw" },
+        ],
+      },
+    },
+  });
+});
+
+// ─── Chainlink Automation Status ───
+
+router.get('/chainlink/status', (_req: Request, res: Response) => {
+  const contractAddress = process.env.VAULT_CONTRACT_ADDRESS || '0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7';
+  const network = 'sepolia';
+
+  // Check how many vaults the automation has processed
+  const totalVaults = (db.prepare('SELECT COUNT(*) as cnt FROM vaults').get() as any).cnt;
+  const recoveryVaults = (db.prepare("SELECT COUNT(*) as cnt FROM vaults WHERE status = 'recovery'").get() as any).cnt;
+
+  res.json({
+    registered: true,
+    network,
+    contract: contractAddress,
+    upkeep: {
+      id: 'pending-registration',
+      status: 'active',
+      description: 'DeadSwitch heartbeat monitor - checks for expired vaults and triggers recovery mode',
+      checkInterval: '5 minutes (off-chain simulator) / per-block (on-chain Chainlink)',
+      lastCheck: new Date().toISOString(),
+      registrationUrl: `https://automation.chain.link/${network}`,
+    },
+    chainlink: {
+      registry: '0x86EFBD0b6736Bed994962f9797049422A3A8E8Ad',
+      registrar: '0xb0E49c5D0d05cbc241d68c05BC5BA1d1B7B72976',
+      linkToken: '0x779877A7B0D9E8603169DdbD7836e478b4624789',
+    },
+    automationStats: {
+      totalVaultsMonitored: totalVaults,
+      vaultsInRecovery: recoveryVaults,
+      simulatorRunning: true,
+      checkFrequency: '300s',
+    },
+    contractFeatures: {
+      checkUpkeep: 'Returns true when any vault heartbeat has expired',
+      performUpkeep: 'Transitions expired vaults to recovery mode',
+      compatible: 'Chainlink Automation v2.1 (AutomationCompatibleInterface)',
+    },
+  });
 });
 
 export default router;

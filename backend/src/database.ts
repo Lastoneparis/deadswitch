@@ -49,6 +49,8 @@ export function initDatabase(): void {
       encrypted_shard TEXT NOT NULL,
       storage_type TEXT NOT NULL DEFAULT 'local' CHECK(storage_type IN ('local','0g')),
       storage_ref TEXT,
+      tx_hash TEXT,
+      explorer_url TEXT,
       created_at INTEGER NOT NULL,
       FOREIGN KEY (vault_id) REFERENCES vaults(id)
     );
@@ -73,6 +75,22 @@ export function initDatabase(): void {
       FOREIGN KEY (vault_id) REFERENCES vaults(id)
     );
 
+    CREATE TABLE IF NOT EXISTS tee_attestations (
+      id TEXT PRIMARY KEY,
+      vault_id TEXT NOT NULL,
+      attestation_hash TEXT NOT NULL,
+      enclave_id TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      input_shard_hashes TEXT NOT NULL,
+      output_key_hash TEXT NOT NULL,
+      signature TEXT NOT NULL,
+      verified INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (vault_id) REFERENCES vaults(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_attestations_vault ON tee_attestations(vault_id);
+
     CREATE INDEX IF NOT EXISTS idx_vaults_owner ON vaults(owner_address);
     CREATE INDEX IF NOT EXISTS idx_vaults_beneficiary ON vaults(beneficiary_address);
     CREATE INDEX IF NOT EXISTS idx_vaults_status ON vaults(status);
@@ -80,6 +98,15 @@ export function initDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_shards_vault ON shard_storage(vault_id);
     CREATE INDEX IF NOT EXISTS idx_claims_vault ON claims(vault_id);
   `);
+
+  // Migration: add tx_hash and explorer_url columns if missing
+  try {
+    db.prepare('SELECT tx_hash FROM shard_storage LIMIT 1').get();
+  } catch {
+    db.exec('ALTER TABLE shard_storage ADD COLUMN tx_hash TEXT');
+    db.exec('ALTER TABLE shard_storage ADD COLUMN explorer_url TEXT');
+    console.log('[DB] Migrated shard_storage: added tx_hash, explorer_url columns');
+  }
 
   // Seed demo vault if none exist
   const count = db.prepare('SELECT COUNT(*) as cnt FROM vaults').get() as { cnt: number };

@@ -4,18 +4,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Shield, LayoutDashboard, PlusCircle, Key, BookOpen, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n, LanguageSwitcher } from '@/lib/i18n';
 
-const nav = [
-  { href: '/', label: 'Home', icon: Shield },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/create', label: 'Create Vault', icon: PlusCircle },
-  { href: '/claim', label: 'Claim', icon: Key },
-  { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
+const navItems = [
+  { href: '/', labelKey: 'nav.home', icon: Shield },
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/create', labelKey: 'nav.create', icon: PlusCircle },
+  { href: '/claim', labelKey: 'nav.claim', icon: Key },
+  { href: '/how-it-works', labelKey: 'nav.how', icon: BookOpen },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
 
   return (
     <>
@@ -48,13 +50,13 @@ export default function Sidebar() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">DeadSwitch</h1>
-              <p className="text-xs text-subtle">Crypto Inheritance</p>
+              <p className="text-xs text-subtle">{t('nav.subtitle')}</p>
             </div>
           </Link>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          {nav.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href;
             return (
               <Link
@@ -68,16 +70,17 @@ export default function Sidebar() {
                 }`}
               >
                 <Icon size={18} />
-                {label}
+                {t(labelKey)}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 space-y-3 border-t border-border">
+          <LanguageSwitcher />
           <div className="px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
-            <p className="text-xs text-primary font-medium">ETHGlobal Cannes 2026</p>
-            <p className="text-xs text-subtle mt-1">Hackathon Project</p>
+            <p className="text-xs text-primary font-medium">{t('nav.hackathon')}</p>
+            <p className="text-xs text-subtle mt-1">{t('nav.hackathon_sub')}</p>
           </div>
         </div>
       </aside>

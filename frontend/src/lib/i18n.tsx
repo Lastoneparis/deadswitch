@@ -1,0 +1,760 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+
+export const LANGUAGES = [
+  { code: 'en', label: 'English', flag: '\u{1F1EC}\u{1F1E7}' },
+  { code: 'fr', label: 'Fran\u00e7ais', flag: '\u{1F1EB}\u{1F1F7}' },
+  { code: 'es', label: 'Espa\u00f1ol', flag: '\u{1F1EA}\u{1F1F8}' },
+  { code: 'it', label: 'Italiano', flag: '\u{1F1EE}\u{1F1F9}' },
+  { code: 'de', label: 'Deutsch', flag: '\u{1F1E9}\u{1F1EA}' },
+  { code: 'ja', label: '\u65E5\u672C\u8A9E', flag: '\u{1F1EF}\u{1F1F5}' },
+] as const;
+
+export type LangCode = (typeof LANGUAGES)[number]['code'];
+
+const translations: Record<string, Record<string, string>> = {
+  en: {
+    // Nav
+    'nav.home': 'Home',
+    'nav.dashboard': 'Dashboard',
+    'nav.create': 'Create Vault',
+    'nav.claim': 'Claim',
+    'nav.how': 'How It Works',
+    'nav.subtitle': 'Crypto Inheritance',
+    'nav.hackathon': 'ETHGlobal Cannes 2026',
+    'nav.hackathon_sub': 'Hackathon Project',
+
+    // Landing hero
+    'hero.badge': 'ETHGlobal Cannes 2026',
+    'hero.title_1': "Your Crypto Shouldn't",
+    'hero.title_2': 'Die With You',
+    'hero.subtitle': 'Decentralized inheritance for the blockchain era. If you stop checking in, your family recovers your funds. Chainlink-automated. World ID-verified. On-chain.',
+    'hero.cta_create': 'Create Your Vault',
+    'hero.cta_beneficiary': "I'm a Beneficiary",
+
+    // Steps
+    'steps.title': 'How It Works',
+    'steps.setup_title': 'Set Up',
+    'steps.setup_desc': 'Connect your wallet, add a beneficiary address, and deposit your funds into a secure vault.',
+    'steps.active_title': 'Stay Active',
+    'steps.active_desc': 'Sign a heartbeat periodically to prove you are alive and in control. Simple as one click.',
+    'steps.protected_title': 'Protected',
+    'steps.protected_desc': 'If you stop checking in, Chainlink Automation triggers recovery. Your heir claims with World ID.',
+    'steps.step': 'Step',
+
+    // Stats
+    'stats.vaults': 'Vaults Created',
+    'stats.protected': 'Protected',
+    'stats.heartbeats': 'Heartbeats',
+    'stats.built_with': 'Built With',
+
+    // Dashboard
+    'dash.title': 'Vault Dashboard',
+    'dash.subtitle': 'Monitor and manage your inheritance vault',
+    'dash.last_heartbeat': 'Last Heartbeat',
+    'dash.balance': 'Balance',
+    'dash.beneficiary': 'Beneficiary',
+    'dash.worldid_verified': 'World ID verified',
+    'dash.timeline': 'Activity Timeline',
+    'dash.heartbeat_confirmed': 'Heartbeat confirmed on-chain',
+    'dash.vault_created': 'Vault created with 3.2 ETH deposit',
+    'dash.inheritance_transferred': 'Inheritance Transferred',
+    'dash.transferred_to': 'has been securely transferred to',
+    'dash.recovery_active': 'RECOVERY MODE ACTIVE',
+    'dash.recovery_desc': 'The vault owner has not checked in for 93 days.',
+    'dash.chainlink_triggered': 'Chainlink Automation has triggered recovery.',
+
+    // Heartbeat
+    'heartbeat.button': "I'm Still Here",
+    'heartbeat.sending': 'Sending...',
+    'heartbeat.confirmed': 'Confirmed!',
+    'heartbeat.recorded': 'Heartbeat Recorded!',
+    'heartbeat.help': 'Press to send your heartbeat and confirm you are still in control of your vault.',
+
+    // Demo
+    'demo.title': 'Demo Controls',
+    'demo.for_judges': 'For Judges',
+    'demo.desc': 'Click these buttons to simulate the full lifecycle of a DeadSwitch vault.',
+    'demo.send_heartbeat': 'Send Heartbeat',
+    'demo.simulate_death': 'Simulate Death (90 days)',
+    'demo.claim_heir': 'Claim as Heir',
+    'demo.reset': 'Reset Demo',
+
+    // Claim
+    'claim.title': 'Claim Inheritance',
+    'claim.subtitle': 'Enter a vault address to check if you can claim.',
+    'claim.placeholder': 'Vault address or ENS name...',
+    'claim.search': 'Search',
+    'claim.vault_info': 'Vault Information',
+    'claim.owner': 'Owner',
+    'claim.active_msg': 'This vault is active',
+    'claim.active_desc': 'The owner is still checking in. Recovery is not available.',
+    'claim.recovery_msg': 'Recovery Mode Active',
+    'claim.recovery_desc': 'The owner has not checked in for',
+    'claim.recovery_claim': 'You may claim this inheritance.',
+    'claim.btn': 'Claim Inheritance',
+    'claim.processing': 'Processing on-chain...',
+    'claim.success_title': 'Inheritance Transferred',
+    'claim.success_desc': 'has been securely transferred to your wallet.',
+    'claim.tx_confirmed': 'Transaction confirmed on-chain',
+
+    // Create
+    'create.title': 'Create Your Vault',
+    'create.subtitle': 'Set up inheritance protection in 5 simple steps.',
+    'create.connect': 'Connect Wallet',
+    'create.connect_desc': 'Connect your wallet to create a vault',
+    'create.beneficiary': 'Add Beneficiary',
+    'create.beneficiary_desc': 'Who should inherit your funds?',
+    'create.interval': 'Heartbeat Interval',
+    'create.interval_desc': 'How often should you check in?',
+    'create.deposit': 'Deposit Amount',
+    'create.deposit_desc': 'How much ETH to protect?',
+    'create.review': 'Review & Deploy',
+    'create.review_desc': 'Confirm your vault settings',
+    'create.deploy': 'Deploy Vault',
+    'create.deploying': 'Deploying...',
+    'create.success': 'Your Vault is Active!',
+    'create.reminder': 'Remember to check in every',
+    'create.days': 'days',
+    'create.go_dashboard': 'Go to Dashboard',
+    'create.continue': 'Continue',
+    'create.back': 'Back',
+
+    // How it works
+    'how.title': 'How DeadSwitch Works',
+    'how.subtitle': 'A decentralized dead man\'s switch for crypto inheritance. No lawyers. No custodians. Just smart contracts.',
+    'how.tech_title': 'Technology Stack',
+    'how.cta_title': 'Ready to Protect Your Crypto Legacy?',
+    'how.cta_desc': 'Set up takes less than 2 minutes.',
+
+    // Statuses
+    'status.active': 'ACTIVE',
+    'status.warning': 'WARNING',
+    'status.recovery': 'RECOVERY MODE',
+    'status.claimed': 'CLAIMED',
+  },
+
+  fr: {
+    'nav.home': 'Accueil',
+    'nav.dashboard': 'Tableau de bord',
+    'nav.create': 'Cr\u00e9er un coffre',
+    'nav.claim': 'R\u00e9clamer',
+    'nav.how': 'Comment \u00e7a marche',
+    'nav.subtitle': 'H\u00e9ritage crypto',
+    'nav.hackathon': 'ETHGlobal Cannes 2026',
+    'nav.hackathon_sub': 'Projet Hackathon',
+
+    'hero.badge': 'ETHGlobal Cannes 2026',
+    'hero.title_1': 'Votre crypto ne devrait pas',
+    'hero.title_2': 'mourir avec vous',
+    'hero.subtitle': "H\u00e9ritage d\u00e9centralis\u00e9 pour l'\u00e8re blockchain. Si vous cessez de vous manifester, votre famille r\u00e9cup\u00e8re vos fonds. Automatis\u00e9 par Chainlink. V\u00e9rifi\u00e9 par World ID. On-chain.",
+    'hero.cta_create': 'Cr\u00e9er votre coffre',
+    'hero.cta_beneficiary': 'Je suis b\u00e9n\u00e9ficiaire',
+
+    'steps.title': 'Comment \u00e7a marche',
+    'steps.setup_title': 'Configuration',
+    'steps.setup_desc': 'Connectez votre portefeuille, ajoutez une adresse b\u00e9n\u00e9ficiaire et d\u00e9posez vos fonds dans un coffre s\u00e9curis\u00e9.',
+    'steps.active_title': 'Restez actif',
+    'steps.active_desc': 'Signez un battement de c\u0153ur p\u00e9riodiquement pour prouver que vous \u00eates en vie et en contr\u00f4le. Simple comme un clic.',
+    'steps.protected_title': 'Prot\u00e9g\u00e9',
+    'steps.protected_desc': 'Si vous cessez de vous manifester, Chainlink Automation d\u00e9clenche la r\u00e9cup\u00e9ration. Votre h\u00e9ritier r\u00e9clame avec World ID.',
+    'steps.step': '\u00c9tape',
+
+    'stats.vaults': 'Coffres cr\u00e9\u00e9s',
+    'stats.protected': 'Prot\u00e9g\u00e9s',
+    'stats.heartbeats': 'Battements',
+    'stats.built_with': 'Construit avec',
+
+    'dash.title': 'Tableau de bord',
+    'dash.subtitle': 'Surveillez et g\u00e9rez votre coffre d\'h\u00e9ritage',
+    'dash.last_heartbeat': 'Dernier battement',
+    'dash.balance': 'Solde',
+    'dash.beneficiary': 'B\u00e9n\u00e9ficiaire',
+    'dash.worldid_verified': 'World ID v\u00e9rifi\u00e9',
+    'dash.timeline': 'Chronologie',
+    'dash.heartbeat_confirmed': 'Battement confirm\u00e9 on-chain',
+    'dash.vault_created': 'Coffre cr\u00e9\u00e9 avec 3.2 ETH',
+    'dash.inheritance_transferred': 'H\u00e9ritage transf\u00e9r\u00e9',
+    'dash.transferred_to': 'a \u00e9t\u00e9 transf\u00e9r\u00e9 en toute s\u00e9curit\u00e9 \u00e0',
+    'dash.recovery_active': 'MODE DE R\u00c9CUP\u00c9RATION ACTIF',
+    'dash.recovery_desc': 'Le propri\u00e9taire du coffre ne s\'est pas manifest\u00e9 depuis 93 jours.',
+    'dash.chainlink_triggered': 'Chainlink Automation a d\u00e9clench\u00e9 la r\u00e9cup\u00e9ration.',
+
+    'heartbeat.button': 'Je suis toujours l\u00e0',
+    'heartbeat.sending': 'Envoi...',
+    'heartbeat.confirmed': 'Confirm\u00e9 !',
+    'heartbeat.recorded': 'Battement enregistr\u00e9 !',
+    'heartbeat.help': 'Appuyez pour envoyer votre battement et confirmer que vous \u00eates toujours en contr\u00f4le de votre coffre.',
+
+    'demo.title': 'Contr\u00f4les d\u00e9mo',
+    'demo.for_judges': 'Pour les juges',
+    'demo.desc': 'Cliquez sur ces boutons pour simuler le cycle de vie complet d\'un coffre DeadSwitch.',
+    'demo.send_heartbeat': 'Envoyer un battement',
+    'demo.simulate_death': 'Simuler le d\u00e9c\u00e8s (90 jours)',
+    'demo.claim_heir': 'R\u00e9clamer en tant qu\'h\u00e9ritier',
+    'demo.reset': 'R\u00e9initialiser',
+
+    'claim.title': 'R\u00e9clamer l\'h\u00e9ritage',
+    'claim.subtitle': 'Entrez une adresse de coffre pour v\u00e9rifier si vous pouvez r\u00e9clamer.',
+    'claim.placeholder': 'Adresse du coffre ou nom ENS...',
+    'claim.search': 'Rechercher',
+    'claim.vault_info': 'Informations du coffre',
+    'claim.owner': 'Propri\u00e9taire',
+    'claim.active_msg': 'Ce coffre est actif',
+    'claim.active_desc': 'Le propri\u00e9taire se manifeste toujours. La r\u00e9cup\u00e9ration n\'est pas disponible.',
+    'claim.recovery_msg': 'Mode de r\u00e9cup\u00e9ration actif',
+    'claim.recovery_desc': 'Le propri\u00e9taire ne s\'est pas manifest\u00e9 depuis',
+    'claim.recovery_claim': 'Vous pouvez r\u00e9clamer cet h\u00e9ritage.',
+    'claim.btn': 'R\u00e9clamer l\'h\u00e9ritage',
+    'claim.processing': 'Traitement on-chain...',
+    'claim.success_title': 'H\u00e9ritage transf\u00e9r\u00e9',
+    'claim.success_desc': 'a \u00e9t\u00e9 transf\u00e9r\u00e9 en toute s\u00e9curit\u00e9 vers votre portefeuille.',
+    'claim.tx_confirmed': 'Transaction confirm\u00e9e on-chain',
+
+    'create.title': 'Cr\u00e9er votre coffre',
+    'create.subtitle': 'Configurez la protection d\'h\u00e9ritage en 5 \u00e9tapes simples.',
+    'create.connect': 'Connecter le portefeuille',
+    'create.connect_desc': 'Connectez votre portefeuille pour cr\u00e9er un coffre',
+    'create.beneficiary': 'Ajouter un b\u00e9n\u00e9ficiaire',
+    'create.beneficiary_desc': 'Qui doit h\u00e9riter de vos fonds ?',
+    'create.interval': 'Intervalle de battement',
+    'create.interval_desc': '\u00c0 quelle fr\u00e9quence devez-vous vous manifester ?',
+    'create.deposit': 'Montant du d\u00e9p\u00f4t',
+    'create.deposit_desc': 'Combien d\'ETH prot\u00e9ger ?',
+    'create.review': 'V\u00e9rifier et d\u00e9ployer',
+    'create.review_desc': 'Confirmez les param\u00e8tres de votre coffre',
+    'create.deploy': 'D\u00e9ployer le coffre',
+    'create.deploying': 'D\u00e9ploiement...',
+    'create.success': 'Votre coffre est actif !',
+    'create.reminder': 'N\'oubliez pas de vous manifester tous les',
+    'create.days': 'jours',
+    'create.go_dashboard': 'Aller au tableau de bord',
+    'create.continue': 'Continuer',
+    'create.back': 'Retour',
+
+    'how.title': 'Comment fonctionne DeadSwitch',
+    'how.subtitle': 'Un dead man\'s switch d\u00e9centralis\u00e9 pour l\'h\u00e9ritage crypto. Pas d\'avocats. Pas de d\u00e9positaires. Juste des smart contracts.',
+    'how.tech_title': 'Stack technologique',
+    'how.cta_title': 'Pr\u00eat \u00e0 prot\u00e9ger votre h\u00e9ritage crypto ?',
+    'how.cta_desc': 'La configuration prend moins de 2 minutes.',
+
+    'status.active': 'ACTIF',
+    'status.warning': 'AVERTISSEMENT',
+    'status.recovery': 'MODE R\u00c9CUP\u00c9RATION',
+    'status.claimed': 'R\u00c9CLAM\u00c9',
+  },
+
+  es: {
+    'nav.home': 'Inicio',
+    'nav.dashboard': 'Panel',
+    'nav.create': 'Crear b\u00f3veda',
+    'nav.claim': 'Reclamar',
+    'nav.how': 'C\u00f3mo funciona',
+    'nav.subtitle': 'Herencia cripto',
+    'nav.hackathon': 'ETHGlobal Cannes 2026',
+    'nav.hackathon_sub': 'Proyecto Hackathon',
+
+    'hero.badge': 'ETHGlobal Cannes 2026',
+    'hero.title_1': 'Tu cripto no deber\u00eda',
+    'hero.title_2': 'morir contigo',
+    'hero.subtitle': 'Herencia descentralizada para la era blockchain. Si dejas de registrarte, tu familia recupera tus fondos. Automatizado por Chainlink. Verificado por World ID. On-chain.',
+    'hero.cta_create': 'Crear tu b\u00f3veda',
+    'hero.cta_beneficiary': 'Soy beneficiario',
+
+    'steps.title': 'C\u00f3mo funciona',
+    'steps.setup_title': 'Configurar',
+    'steps.setup_desc': 'Conecta tu cartera, a\u00f1ade una direcci\u00f3n beneficiaria y deposita tus fondos en una b\u00f3veda segura.',
+    'steps.active_title': 'Mantente activo',
+    'steps.active_desc': 'Firma un latido peri\u00f3dicamente para demostrar que est\u00e1s vivo y en control. Simple como un clic.',
+    'steps.protected_title': 'Protegido',
+    'steps.protected_desc': 'Si dejas de registrarte, Chainlink Automation activa la recuperaci\u00f3n. Tu heredero reclama con World ID.',
+    'steps.step': 'Paso',
+
+    'stats.vaults': 'B\u00f3vedas creadas',
+    'stats.protected': 'Protegidos',
+    'stats.heartbeats': 'Latidos',
+    'stats.built_with': 'Construido con',
+
+    'dash.title': 'Panel de la b\u00f3veda',
+    'dash.subtitle': 'Monitorea y gestiona tu b\u00f3veda de herencia',
+    'dash.last_heartbeat': '\u00daltimo latido',
+    'dash.balance': 'Saldo',
+    'dash.beneficiary': 'Beneficiario',
+    'dash.worldid_verified': 'World ID verificado',
+    'dash.timeline': 'Cronolog\u00eda',
+    'dash.heartbeat_confirmed': 'Latido confirmado on-chain',
+    'dash.vault_created': 'B\u00f3veda creada con 3.2 ETH',
+    'dash.inheritance_transferred': 'Herencia transferida',
+    'dash.transferred_to': 'ha sido transferido de forma segura a',
+    'dash.recovery_active': 'MODO DE RECUPERACI\u00d3N ACTIVO',
+    'dash.recovery_desc': 'El propietario no se ha registrado en 93 d\u00edas.',
+    'dash.chainlink_triggered': 'Chainlink Automation ha activado la recuperaci\u00f3n.',
+
+    'heartbeat.button': 'Sigo aqu\u00ed',
+    'heartbeat.sending': 'Enviando...',
+    'heartbeat.confirmed': '\u00a1Confirmado!',
+    'heartbeat.recorded': '\u00a1Latido registrado!',
+    'heartbeat.help': 'Presiona para enviar tu latido y confirmar que sigues en control de tu b\u00f3veda.',
+
+    'demo.title': 'Controles demo',
+    'demo.for_judges': 'Para jueces',
+    'demo.desc': 'Haz clic en estos botones para simular el ciclo de vida completo de una b\u00f3veda DeadSwitch.',
+    'demo.send_heartbeat': 'Enviar latido',
+    'demo.simulate_death': 'Simular fallecimiento (90 d\u00edas)',
+    'demo.claim_heir': 'Reclamar como heredero',
+    'demo.reset': 'Reiniciar demo',
+
+    'claim.title': 'Reclamar herencia',
+    'claim.subtitle': 'Introduce una direcci\u00f3n de b\u00f3veda para verificar si puedes reclamar.',
+    'claim.placeholder': 'Direcci\u00f3n de b\u00f3veda o nombre ENS...',
+    'claim.search': 'Buscar',
+    'claim.vault_info': 'Informaci\u00f3n de la b\u00f3veda',
+    'claim.owner': 'Propietario',
+    'claim.active_msg': 'Esta b\u00f3veda est\u00e1 activa',
+    'claim.active_desc': 'El propietario sigue registr\u00e1ndose. La recuperaci\u00f3n no est\u00e1 disponible.',
+    'claim.recovery_msg': 'Modo de recuperaci\u00f3n activo',
+    'claim.recovery_desc': 'El propietario no se ha registrado en',
+    'claim.recovery_claim': 'Puedes reclamar esta herencia.',
+    'claim.btn': 'Reclamar herencia',
+    'claim.processing': 'Procesando on-chain...',
+    'claim.success_title': 'Herencia transferida',
+    'claim.success_desc': 'ha sido transferido de forma segura a tu cartera.',
+    'claim.tx_confirmed': 'Transacci\u00f3n confirmada on-chain',
+
+    'create.title': 'Crear tu b\u00f3veda',
+    'create.subtitle': 'Configura la protecci\u00f3n de herencia en 5 simples pasos.',
+    'create.connect': 'Conectar cartera',
+    'create.connect_desc': 'Conecta tu cartera para crear una b\u00f3veda',
+    'create.beneficiary': 'A\u00f1adir beneficiario',
+    'create.beneficiary_desc': '\u00bfQui\u00e9n debe heredar tus fondos?',
+    'create.interval': 'Intervalo de latido',
+    'create.interval_desc': '\u00bfCon qu\u00e9 frecuencia debes registrarte?',
+    'create.deposit': 'Monto del dep\u00f3sito',
+    'create.deposit_desc': '\u00bfCu\u00e1nto ETH proteger?',
+    'create.review': 'Revisar y desplegar',
+    'create.review_desc': 'Confirma la configuraci\u00f3n de tu b\u00f3veda',
+    'create.deploy': 'Desplegar b\u00f3veda',
+    'create.deploying': 'Desplegando...',
+    'create.success': '\u00a1Tu b\u00f3veda est\u00e1 activa!',
+    'create.reminder': 'Recuerda registrarte cada',
+    'create.days': 'd\u00edas',
+    'create.go_dashboard': 'Ir al panel',
+    'create.continue': 'Continuar',
+    'create.back': 'Atr\u00e1s',
+
+    'how.title': 'C\u00f3mo funciona DeadSwitch',
+    'how.subtitle': 'Un dead man\'s switch descentralizado para herencia cripto. Sin abogados. Sin custodios. Solo contratos inteligentes.',
+    'how.tech_title': 'Stack tecnol\u00f3gico',
+    'how.cta_title': '\u00bfListo para proteger tu herencia cripto?',
+    'how.cta_desc': 'La configuraci\u00f3n toma menos de 2 minutos.',
+
+    'status.active': 'ACTIVO',
+    'status.warning': 'ADVERTENCIA',
+    'status.recovery': 'MODO RECUPERACI\u00d3N',
+    'status.claimed': 'RECLAMADO',
+  },
+
+  it: {
+    'nav.home': 'Home',
+    'nav.dashboard': 'Pannello',
+    'nav.create': 'Crea cassaforte',
+    'nav.claim': 'Reclama',
+    'nav.how': 'Come funziona',
+    'nav.subtitle': 'Eredit\u00e0 crypto',
+    'nav.hackathon': 'ETHGlobal Cannes 2026',
+    'nav.hackathon_sub': 'Progetto Hackathon',
+
+    'hero.badge': 'ETHGlobal Cannes 2026',
+    'hero.title_1': 'Le tue crypto non dovrebbero',
+    'hero.title_2': 'morire con te',
+    'hero.subtitle': "Eredit\u00e0 decentralizzata per l'era blockchain. Se smetti di fare check-in, la tua famiglia recupera i tuoi fondi. Automatizzato da Chainlink. Verificato da World ID. On-chain.",
+    'hero.cta_create': 'Crea la tua cassaforte',
+    'hero.cta_beneficiary': 'Sono un beneficiario',
+
+    'steps.title': 'Come funziona',
+    'steps.setup_title': 'Configurazione',
+    'steps.setup_desc': 'Collega il tuo portafoglio, aggiungi un indirizzo beneficiario e deposita i tuoi fondi in una cassaforte sicura.',
+    'steps.active_title': 'Resta attivo',
+    'steps.active_desc': 'Firma un heartbeat periodicamente per dimostrare che sei vivo e in controllo. Semplice come un clic.',
+    'steps.protected_title': 'Protetto',
+    'steps.protected_desc': 'Se smetti di fare check-in, Chainlink Automation attiva il recupero. Il tuo erede reclama con World ID.',
+    'steps.step': 'Passo',
+
+    'stats.vaults': 'Cassaforti create',
+    'stats.protected': 'Protetti',
+    'stats.heartbeats': 'Heartbeats',
+    'stats.built_with': 'Costruito con',
+
+    'dash.title': 'Pannello cassaforte',
+    'dash.subtitle': 'Monitora e gestisci la tua cassaforte di eredit\u00e0',
+    'dash.last_heartbeat': 'Ultimo heartbeat',
+    'dash.balance': 'Saldo',
+    'dash.beneficiary': 'Beneficiario',
+    'dash.worldid_verified': 'World ID verificato',
+    'dash.timeline': 'Cronologia',
+    'dash.heartbeat_confirmed': 'Heartbeat confermato on-chain',
+    'dash.vault_created': 'Cassaforte creata con 3.2 ETH',
+    'dash.inheritance_transferred': 'Eredit\u00e0 trasferita',
+    'dash.transferred_to': '\u00e8 stato trasferito in modo sicuro a',
+    'dash.recovery_active': 'MODALIT\u00c0 DI RECUPERO ATTIVA',
+    'dash.recovery_desc': 'Il proprietario non ha fatto check-in per 93 giorni.',
+    'dash.chainlink_triggered': 'Chainlink Automation ha attivato il recupero.',
+
+    'heartbeat.button': 'Sono ancora qui',
+    'heartbeat.sending': 'Invio...',
+    'heartbeat.confirmed': 'Confermato!',
+    'heartbeat.recorded': 'Heartbeat registrato!',
+    'heartbeat.help': 'Premi per inviare il tuo heartbeat e confermare che sei ancora in controllo della tua cassaforte.',
+
+    'demo.title': 'Controlli demo',
+    'demo.for_judges': 'Per i giudici',
+    'demo.desc': 'Clicca questi pulsanti per simulare il ciclo di vita completo di una cassaforte DeadSwitch.',
+    'demo.send_heartbeat': 'Invia heartbeat',
+    'demo.simulate_death': 'Simula decesso (90 giorni)',
+    'demo.claim_heir': 'Reclama come erede',
+    'demo.reset': 'Reset demo',
+
+    'claim.title': 'Reclama eredit\u00e0',
+    'claim.subtitle': 'Inserisci un indirizzo cassaforte per verificare se puoi reclamare.',
+    'claim.placeholder': 'Indirizzo cassaforte o nome ENS...',
+    'claim.search': 'Cerca',
+    'claim.vault_info': 'Informazioni cassaforte',
+    'claim.owner': 'Proprietario',
+    'claim.active_msg': 'Questa cassaforte \u00e8 attiva',
+    'claim.active_desc': 'Il proprietario sta ancora facendo check-in. Il recupero non \u00e8 disponibile.',
+    'claim.recovery_msg': 'Modalit\u00e0 di recupero attiva',
+    'claim.recovery_desc': 'Il proprietario non ha fatto check-in da',
+    'claim.recovery_claim': 'Puoi reclamare questa eredit\u00e0.',
+    'claim.btn': 'Reclama eredit\u00e0',
+    'claim.processing': 'Elaborazione on-chain...',
+    'claim.success_title': 'Eredit\u00e0 trasferita',
+    'claim.success_desc': '\u00e8 stato trasferito in modo sicuro al tuo portafoglio.',
+    'claim.tx_confirmed': 'Transazione confermata on-chain',
+
+    'create.title': 'Crea la tua cassaforte',
+    'create.subtitle': "Configura la protezione dell'eredit\u00e0 in 5 semplici passi.",
+    'create.connect': 'Collega portafoglio',
+    'create.connect_desc': 'Collega il tuo portafoglio per creare una cassaforte',
+    'create.beneficiary': 'Aggiungi beneficiario',
+    'create.beneficiary_desc': 'Chi dovrebbe ereditare i tuoi fondi?',
+    'create.interval': 'Intervallo heartbeat',
+    'create.interval_desc': 'Ogni quanto dovresti fare check-in?',
+    'create.deposit': 'Importo deposito',
+    'create.deposit_desc': 'Quanti ETH proteggere?',
+    'create.review': 'Rivedi e distribuisci',
+    'create.review_desc': 'Conferma le impostazioni della tua cassaforte',
+    'create.deploy': 'Distribuisci cassaforte',
+    'create.deploying': 'Distribuzione...',
+    'create.success': 'La tua cassaforte \u00e8 attiva!',
+    'create.reminder': 'Ricorda di fare check-in ogni',
+    'create.days': 'giorni',
+    'create.go_dashboard': 'Vai al pannello',
+    'create.continue': 'Continua',
+    'create.back': 'Indietro',
+
+    'how.title': 'Come funziona DeadSwitch',
+    'how.subtitle': "Un dead man's switch decentralizzato per l'eredit\u00e0 crypto. Niente avvocati. Niente custodi. Solo smart contract.",
+    'how.tech_title': 'Stack tecnologico',
+    'how.cta_title': 'Pronto a proteggere la tua eredit\u00e0 crypto?',
+    'how.cta_desc': 'La configurazione richiede meno di 2 minuti.',
+
+    'status.active': 'ATTIVO',
+    'status.warning': 'ATTENZIONE',
+    'status.recovery': 'MODALIT\u00c0 RECUPERO',
+    'status.claimed': 'RECLAMATO',
+  },
+
+  de: {
+    'nav.home': 'Startseite',
+    'nav.dashboard': 'Dashboard',
+    'nav.create': 'Tresor erstellen',
+    'nav.claim': 'Einfordern',
+    'nav.how': 'So funktioniert es',
+    'nav.subtitle': 'Krypto-Erbschaft',
+    'nav.hackathon': 'ETHGlobal Cannes 2026',
+    'nav.hackathon_sub': 'Hackathon-Projekt',
+
+    'hero.badge': 'ETHGlobal Cannes 2026',
+    'hero.title_1': 'Deine Krypto sollte nicht',
+    'hero.title_2': 'mit dir sterben',
+    'hero.subtitle': 'Dezentrale Vererbung f\u00fcr die Blockchain-\u00c4ra. Wenn du aufh\u00f6rst einzuchecken, erh\u00e4lt deine Familie deine Mittel. Chainlink-automatisiert. World ID-verifiziert. On-chain.',
+    'hero.cta_create': 'Tresor erstellen',
+    'hero.cta_beneficiary': 'Ich bin Beg\u00fcnstigter',
+
+    'steps.title': 'So funktioniert es',
+    'steps.setup_title': 'Einrichtung',
+    'steps.setup_desc': 'Verbinde deine Wallet, f\u00fcge eine Beg\u00fcnstigtenadresse hinzu und zahle deine Mittel in einen sicheren Tresor ein.',
+    'steps.active_title': 'Bleib aktiv',
+    'steps.active_desc': 'Sende regelm\u00e4\u00dfig einen Heartbeat, um zu beweisen, dass du lebst und die Kontrolle hast. So einfach wie ein Klick.',
+    'steps.protected_title': 'Gesch\u00fctzt',
+    'steps.protected_desc': 'Wenn du aufh\u00f6rst einzuchecken, l\u00f6st Chainlink Automation die Wiederherstellung aus. Dein Erbe fordert mit World ID ein.',
+    'steps.step': 'Schritt',
+
+    'stats.vaults': 'Tresore erstellt',
+    'stats.protected': 'Gesch\u00fctzt',
+    'stats.heartbeats': 'Heartbeats',
+    'stats.built_with': 'Gebaut mit',
+
+    'dash.title': 'Tresor-Dashboard',
+    'dash.subtitle': '\u00dcberwache und verwalte deinen Erbschaftstresor',
+    'dash.last_heartbeat': 'Letzter Heartbeat',
+    'dash.balance': 'Guthaben',
+    'dash.beneficiary': 'Beg\u00fcnstigter',
+    'dash.worldid_verified': 'World ID verifiziert',
+    'dash.timeline': 'Aktivit\u00e4tsverlauf',
+    'dash.heartbeat_confirmed': 'Heartbeat on-chain best\u00e4tigt',
+    'dash.vault_created': 'Tresor mit 3.2 ETH erstellt',
+    'dash.inheritance_transferred': 'Erbschaft \u00fcbertragen',
+    'dash.transferred_to': 'wurde sicher \u00fcbertragen an',
+    'dash.recovery_active': 'WIEDERHERSTELLUNGSMODUS AKTIV',
+    'dash.recovery_desc': 'Der Tresorbesitzer hat sich seit 93 Tagen nicht gemeldet.',
+    'dash.chainlink_triggered': 'Chainlink Automation hat die Wiederherstellung ausgel\u00f6st.',
+
+    'heartbeat.button': 'Ich bin noch da',
+    'heartbeat.sending': 'Sende...',
+    'heartbeat.confirmed': 'Best\u00e4tigt!',
+    'heartbeat.recorded': 'Heartbeat aufgezeichnet!',
+    'heartbeat.help': 'Dr\u00fccke, um deinen Heartbeat zu senden und zu best\u00e4tigen, dass du noch die Kontrolle \u00fcber deinen Tresor hast.',
+
+    'demo.title': 'Demo-Steuerung',
+    'demo.for_judges': 'F\u00fcr Juroren',
+    'demo.desc': 'Klicke auf diese Buttons, um den vollst\u00e4ndigen Lebenszyklus eines DeadSwitch-Tresors zu simulieren.',
+    'demo.send_heartbeat': 'Heartbeat senden',
+    'demo.simulate_death': 'Tod simulieren (90 Tage)',
+    'demo.claim_heir': 'Als Erbe einfordern',
+    'demo.reset': 'Demo zur\u00fccksetzen',
+
+    'claim.title': 'Erbschaft einfordern',
+    'claim.subtitle': 'Gib eine Tresoradresse ein, um zu pr\u00fcfen, ob du einfordern kannst.',
+    'claim.placeholder': 'Tresoradresse oder ENS-Name...',
+    'claim.search': 'Suchen',
+    'claim.vault_info': 'Tresor-Informationen',
+    'claim.owner': 'Besitzer',
+    'claim.active_msg': 'Dieser Tresor ist aktiv',
+    'claim.active_desc': 'Der Besitzer meldet sich noch. Wiederherstellung ist nicht verf\u00fcgbar.',
+    'claim.recovery_msg': 'Wiederherstellungsmodus aktiv',
+    'claim.recovery_desc': 'Der Besitzer hat sich nicht gemeldet seit',
+    'claim.recovery_claim': 'Du kannst diese Erbschaft einfordern.',
+    'claim.btn': 'Erbschaft einfordern',
+    'claim.processing': 'On-chain-Verarbeitung...',
+    'claim.success_title': 'Erbschaft \u00fcbertragen',
+    'claim.success_desc': 'wurde sicher an deine Wallet \u00fcbertragen.',
+    'claim.tx_confirmed': 'Transaktion on-chain best\u00e4tigt',
+
+    'create.title': 'Tresor erstellen',
+    'create.subtitle': 'Richte den Erbschaftsschutz in 5 einfachen Schritten ein.',
+    'create.connect': 'Wallet verbinden',
+    'create.connect_desc': 'Verbinde deine Wallet, um einen Tresor zu erstellen',
+    'create.beneficiary': 'Beg\u00fcnstigten hinzuf\u00fcgen',
+    'create.beneficiary_desc': 'Wer soll deine Mittel erben?',
+    'create.interval': 'Heartbeat-Intervall',
+    'create.interval_desc': 'Wie oft solltest du einchecken?',
+    'create.deposit': 'Einzahlungsbetrag',
+    'create.deposit_desc': 'Wie viel ETH sch\u00fctzen?',
+    'create.review': 'Pr\u00fcfen & bereitstellen',
+    'create.review_desc': 'Best\u00e4tige deine Tresor-Einstellungen',
+    'create.deploy': 'Tresor bereitstellen',
+    'create.deploying': 'Wird bereitgestellt...',
+    'create.success': 'Dein Tresor ist aktiv!',
+    'create.reminder': 'Denke daran, alle',
+    'create.days': 'Tage einzuchecken',
+    'create.go_dashboard': 'Zum Dashboard',
+    'create.continue': 'Weiter',
+    'create.back': 'Zur\u00fcck',
+
+    'how.title': 'So funktioniert DeadSwitch',
+    'how.subtitle': "Ein dezentraler Dead Man's Switch f\u00fcr Krypto-Erbschaft. Keine Anw\u00e4lte. Keine Verwahrer. Nur Smart Contracts.",
+    'how.tech_title': 'Technologie-Stack',
+    'how.cta_title': 'Bereit, dein Krypto-Erbe zu sch\u00fctzen?',
+    'how.cta_desc': 'Die Einrichtung dauert weniger als 2 Minuten.',
+
+    'status.active': 'AKTIV',
+    'status.warning': 'WARNUNG',
+    'status.recovery': 'WIEDERHERSTELLUNG',
+    'status.claimed': 'EINGEFORDERT',
+  },
+
+  ja: {
+    'nav.home': '\u30DB\u30FC\u30E0',
+    'nav.dashboard': '\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9',
+    'nav.create': '\u91D1\u5EAB\u4F5C\u6210',
+    'nav.claim': '\u8ACB\u6C42',
+    'nav.how': '\u4ED5\u7D44\u307F',
+    'nav.subtitle': '\u6697\u53F7\u8CC7\u7523\u76F8\u7D9A',
+    'nav.hackathon': 'ETHGlobal Cannes 2026',
+    'nav.hackathon_sub': '\u30CF\u30C3\u30AB\u30BD\u30F3\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8',
+
+    'hero.badge': 'ETHGlobal Cannes 2026',
+    'hero.title_1': '\u3042\u306A\u305F\u306E\u6697\u53F7\u8CC7\u7523\u306F',
+    'hero.title_2': '\u3042\u306A\u305F\u3068\u5171\u306B\u6B7B\u306C\u3079\u304D\u3067\u306F\u306A\u3044',
+    'hero.subtitle': '\u30D6\u30ED\u30C3\u30AF\u30C1\u30A7\u30FC\u30F3\u6642\u4EE3\u306E\u5206\u6563\u578B\u76F8\u7D9A\u3002\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3092\u3084\u3081\u308B\u3068\u3001\u5BB6\u65CF\u304C\u8CC7\u91D1\u3092\u56DE\u5FA9\u3057\u307E\u3059\u3002Chainlink\u81EA\u52D5\u5316\u3002World ID\u691C\u8A3C\u3002\u30AA\u30F3\u30C1\u30A7\u30FC\u30F3\u3002',
+    'hero.cta_create': '\u91D1\u5EAB\u3092\u4F5C\u6210',
+    'hero.cta_beneficiary': '\u53D7\u76CA\u8005\u3067\u3059',
+
+    'steps.title': '\u4ED5\u7D44\u307F',
+    'steps.setup_title': '\u8A2D\u5B9A',
+    'steps.setup_desc': '\u30A6\u30A9\u30EC\u30C3\u30C8\u3092\u63A5\u7D9A\u3057\u3001\u53D7\u76CA\u8005\u30A2\u30C9\u30EC\u30B9\u3092\u8FFD\u52A0\u3057\u3001\u5B89\u5168\u306A\u91D1\u5EAB\u306B\u8CC7\u91D1\u3092\u9810\u3051\u307E\u3059\u3002',
+    'steps.active_title': '\u30A2\u30AF\u30C6\u30A3\u30D6\u306B',
+    'steps.active_desc': '\u5B9A\u671F\u7684\u306B\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8\u306B\u7F72\u540D\u3057\u3066\u3001\u751F\u5B58\u3068\u7BA1\u7406\u3092\u8A3C\u660E\u3057\u307E\u3059\u3002\u30EF\u30F3\u30AF\u30EA\u30C3\u30AF\u3067\u7C21\u5358\u3002',
+    'steps.protected_title': '\u4FDD\u8B77\u6E08\u307F',
+    'steps.protected_desc': '\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3092\u3084\u3081\u308B\u3068\u3001Chainlink Automation\u304C\u56DE\u5FA9\u3092\u30C8\u30EA\u30AC\u30FC\u3057\u307E\u3059\u3002\u76F8\u7D9A\u4EBA\u306FWorld ID\u3067\u8ACB\u6C42\u3057\u307E\u3059\u3002',
+    'steps.step': '\u30B9\u30C6\u30C3\u30D7',
+
+    'stats.vaults': '\u4F5C\u6210\u3055\u308C\u305F\u91D1\u5EAB',
+    'stats.protected': '\u4FDD\u8B77\u6E08\u307F',
+    'stats.heartbeats': '\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8',
+    'stats.built_with': '\u4F7F\u7528\u6280\u8853',
+
+    'dash.title': '\u91D1\u5EAB\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9',
+    'dash.subtitle': '\u76F8\u7D9A\u91D1\u5EAB\u306E\u76E3\u8996\u3068\u7BA1\u7406',
+    'dash.last_heartbeat': '\u6700\u5F8C\u306E\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8',
+    'dash.balance': '\u6B8B\u9AD8',
+    'dash.beneficiary': '\u53D7\u76CA\u8005',
+    'dash.worldid_verified': 'World ID\u691C\u8A3C\u6E08\u307F',
+    'dash.timeline': '\u30A2\u30AF\u30C6\u30A3\u30D3\u30C6\u30A3',
+    'dash.heartbeat_confirmed': '\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8\u304C\u30AA\u30F3\u30C1\u30A7\u30FC\u30F3\u3067\u78BA\u8A8D\u3055\u308C\u307E\u3057\u305F',
+    'dash.vault_created': '3.2 ETH\u3067\u91D1\u5EAB\u304C\u4F5C\u6210\u3055\u308C\u307E\u3057\u305F',
+    'dash.inheritance_transferred': '\u76F8\u7D9A\u304C\u8EE2\u9001\u3055\u308C\u307E\u3057\u305F',
+    'dash.transferred_to': '\u304C\u5B89\u5168\u306B\u8EE2\u9001\u3055\u308C\u307E\u3057\u305F',
+    'dash.recovery_active': '\u56DE\u5FA9\u30E2\u30FC\u30C9\u6709\u52B9',
+    'dash.recovery_desc': '\u91D1\u5EAB\u306E\u6240\u6709\u8005\u306F93\u65E5\u9593\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u3066\u3044\u307E\u305B\u3093\u3002',
+    'dash.chainlink_triggered': 'Chainlink Automation\u304C\u56DE\u5FA9\u3092\u30C8\u30EA\u30AC\u30FC\u3057\u307E\u3057\u305F\u3002',
+
+    'heartbeat.button': '\u307E\u3060\u3053\u3053\u306B\u3044\u307E\u3059',
+    'heartbeat.sending': '\u9001\u4FE1\u4E2D...',
+    'heartbeat.confirmed': '\u78BA\u8A8D\u6E08\u307F\uFF01',
+    'heartbeat.recorded': '\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8\u8A18\u9332\u6E08\u307F\uFF01',
+    'heartbeat.help': '\u30DC\u30BF\u30F3\u3092\u62BC\u3057\u3066\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8\u3092\u9001\u4FE1\u3057\u3001\u91D1\u5EAB\u306E\u7BA1\u7406\u3092\u78BA\u8A8D\u3057\u307E\u3059\u3002',
+
+    'demo.title': '\u30C7\u30E2\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB',
+    'demo.for_judges': '\u5BE9\u67FB\u54E1\u5411\u3051',
+    'demo.desc': '\u3053\u308C\u3089\u306E\u30DC\u30BF\u30F3\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u3001DeadSwitch\u91D1\u5EAB\u306E\u30E9\u30A4\u30D5\u30B5\u30A4\u30AF\u30EB\u5168\u4F53\u3092\u30B7\u30DF\u30E5\u30EC\u30FC\u30C8\u3057\u307E\u3059\u3002',
+    'demo.send_heartbeat': '\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8\u9001\u4FE1',
+    'demo.simulate_death': '\u6B7B\u4EA1\u30B7\u30DF\u30E5\u30EC\u30FC\u30C8\uFF0890\u65E5\uFF09',
+    'demo.claim_heir': '\u76F8\u7D9A\u4EBA\u3068\u3057\u3066\u8ACB\u6C42',
+    'demo.reset': '\u30C7\u30E2\u30EA\u30BB\u30C3\u30C8',
+
+    'claim.title': '\u76F8\u7D9A\u3092\u8ACB\u6C42',
+    'claim.subtitle': '\u91D1\u5EAB\u30A2\u30C9\u30EC\u30B9\u3092\u5165\u529B\u3057\u3066\u3001\u8ACB\u6C42\u53EF\u80FD\u304B\u78BA\u8A8D\u3057\u307E\u3059\u3002',
+    'claim.placeholder': '\u91D1\u5EAB\u30A2\u30C9\u30EC\u30B9\u307E\u305F\u306FENS\u540D...',
+    'claim.search': '\u691C\u7D22',
+    'claim.vault_info': '\u91D1\u5EAB\u60C5\u5831',
+    'claim.owner': '\u6240\u6709\u8005',
+    'claim.active_msg': '\u3053\u306E\u91D1\u5EAB\u306F\u30A2\u30AF\u30C6\u30A3\u30D6\u3067\u3059',
+    'claim.active_desc': '\u6240\u6709\u8005\u306F\u307E\u3060\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u3066\u3044\u307E\u3059\u3002\u56DE\u5FA9\u306F\u5229\u7528\u3067\u304D\u307E\u305B\u3093\u3002',
+    'claim.recovery_msg': '\u56DE\u5FA9\u30E2\u30FC\u30C9\u6709\u52B9',
+    'claim.recovery_desc': '\u6240\u6709\u8005\u304C\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u3066\u3044\u306A\u3044\u671F\u9593',
+    'claim.recovery_claim': '\u3053\u306E\u76F8\u7D9A\u3092\u8ACB\u6C42\u3067\u304D\u307E\u3059\u3002',
+    'claim.btn': '\u76F8\u7D9A\u3092\u8ACB\u6C42',
+    'claim.processing': '\u30AA\u30F3\u30C1\u30A7\u30FC\u30F3\u51E6\u7406\u4E2D...',
+    'claim.success_title': '\u76F8\u7D9A\u304C\u8EE2\u9001\u3055\u308C\u307E\u3057\u305F',
+    'claim.success_desc': '\u304C\u5B89\u5168\u306B\u3042\u306A\u305F\u306E\u30A6\u30A9\u30EC\u30C3\u30C8\u306B\u8EE2\u9001\u3055\u308C\u307E\u3057\u305F\u3002',
+    'claim.tx_confirmed': '\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3\u304C\u30AA\u30F3\u30C1\u30A7\u30FC\u30F3\u3067\u78BA\u8A8D\u3055\u308C\u307E\u3057\u305F',
+
+    'create.title': '\u91D1\u5EAB\u3092\u4F5C\u6210',
+    'create.subtitle': '5\u3064\u306E\u7C21\u5358\u306A\u30B9\u30C6\u30C3\u30D7\u3067\u76F8\u7D9A\u4FDD\u8B77\u3092\u8A2D\u5B9A\u3057\u307E\u3059\u3002',
+    'create.connect': '\u30A6\u30A9\u30EC\u30C3\u30C8\u63A5\u7D9A',
+    'create.connect_desc': '\u91D1\u5EAB\u3092\u4F5C\u6210\u3059\u308B\u305F\u3081\u306B\u30A6\u30A9\u30EC\u30C3\u30C8\u3092\u63A5\u7D9A\u3057\u307E\u3059',
+    'create.beneficiary': '\u53D7\u76CA\u8005\u3092\u8FFD\u52A0',
+    'create.beneficiary_desc': '\u8AB0\u304C\u8CC7\u91D1\u3092\u76F8\u7D9A\u3059\u3079\u304D\u3067\u3059\u304B\uFF1F',
+    'create.interval': '\u30CF\u30FC\u30C8\u30D3\u30FC\u30C8\u9593\u9694',
+    'create.interval_desc': '\u3069\u306E\u304F\u3089\u3044\u306E\u983B\u5EA6\u3067\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3059\u3079\u304D\u3067\u3059\u304B\uFF1F',
+    'create.deposit': '\u5165\u91D1\u984D',
+    'create.deposit_desc': '\u3069\u306E\u304F\u3089\u3044\u306EETH\u3092\u4FDD\u8B77\u3057\u307E\u3059\u304B\uFF1F',
+    'create.review': '\u78BA\u8A8D\u3068\u30C7\u30D7\u30ED\u30A4',
+    'create.review_desc': '\u91D1\u5EAB\u306E\u8A2D\u5B9A\u3092\u78BA\u8A8D\u3057\u307E\u3059',
+    'create.deploy': '\u91D1\u5EAB\u3092\u30C7\u30D7\u30ED\u30A4',
+    'create.deploying': '\u30C7\u30D7\u30ED\u30A4\u4E2D...',
+    'create.success': '\u91D1\u5EAB\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\uFF01',
+    'create.reminder': '\u5FC5\u305A',
+    'create.days': '\u65E5\u3054\u3068\u306B\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u3066\u304F\u3060\u3055\u3044',
+    'create.go_dashboard': '\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u3078',
+    'create.continue': '\u6B21\u3078',
+    'create.back': '\u623B\u308B',
+
+    'how.title': 'DeadSwitch\u306E\u4ED5\u7D44\u307F',
+    'how.subtitle': '\u6697\u53F7\u8CC7\u7523\u76F8\u7D9A\u306E\u305F\u3081\u306E\u5206\u6563\u578B\u30C7\u30C3\u30C9\u30DE\u30F3\u30BA\u30B9\u30A4\u30C3\u30C1\u3002\u5F01\u8B77\u58EB\u4E0D\u8981\u3002\u30AB\u30B9\u30C8\u30C7\u30A3\u30A2\u30F3\u4E0D\u8981\u3002\u30B9\u30DE\u30FC\u30C8\u30B3\u30F3\u30C8\u30E9\u30AF\u30C8\u3060\u3051\u3002',
+    'how.tech_title': '\u6280\u8853\u30B9\u30BF\u30C3\u30AF',
+    'how.cta_title': '\u6697\u53F7\u8CC7\u7523\u306E\u907A\u7523\u3092\u4FDD\u8B77\u3059\u308B\u6E96\u5099\u306F\u3067\u304D\u307E\u3057\u305F\u304B\uFF1F',
+    'how.cta_desc': '\u8A2D\u5B9A\u306F2\u5206\u672A\u6E80\u3067\u5B8C\u4E86\u3057\u307E\u3059\u3002',
+
+    'status.active': '\u30A2\u30AF\u30C6\u30A3\u30D6',
+    'status.warning': '\u8B66\u544A',
+    'status.recovery': '\u56DE\u5FA9\u30E2\u30FC\u30C9',
+    'status.claimed': '\u8ACB\u6C42\u6E08\u307F',
+  },
+};
+
+interface I18nContextType {
+  lang: LangCode;
+  setLang: (lang: LangCode) => void;
+  t: (key: string) => string;
+}
+
+const I18nContext = createContext<I18nContextType>({
+  lang: 'en',
+  setLang: () => {},
+  t: (key: string) => key,
+});
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<LangCode>('en');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('deadswitch-lang');
+    if (stored && stored in translations) {
+      setLangState(stored as LangCode);
+      return;
+    }
+    const browserLang = navigator.language.slice(0, 2);
+    if (browserLang in translations) {
+      setLangState(browserLang as LangCode);
+    }
+  }, []);
+
+  const setLang = useCallback((newLang: LangCode) => {
+    setLangState(newLang);
+    localStorage.setItem('deadswitch-lang', newLang);
+  }, []);
+
+  const t = useCallback(
+    (key: string) => {
+      return translations[lang]?.[key] ?? translations.en?.[key] ?? key;
+    },
+    [lang]
+  );
+
+  return (
+    <I18nContext.Provider value={{ lang, setLang, t }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+export function useI18n() {
+  return useContext(I18nContext);
+}
+
+export function LanguageSwitcher() {
+  const { lang, setLang } = useI18n();
+
+  return (
+    <div className="flex items-center gap-1">
+      {LANGUAGES.map((l) => (
+        <button
+          key={l.code}
+          onClick={() => setLang(l.code)}
+          title={l.label}
+          className={`text-lg w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+            lang === l.code
+              ? 'bg-primary/20 ring-1 ring-primary/40 scale-110'
+              : 'hover:bg-white/10 opacity-60 hover:opacity-100'
+          }`}
+        >
+          {l.flag}
+        </button>
+      ))}
+    </div>
+  );
+}

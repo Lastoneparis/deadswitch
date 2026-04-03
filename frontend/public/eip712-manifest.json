@@ -1,0 +1,30 @@
+{
+  "$schema": "https://eip712.ledger.com/schema/v1",
+  "context": {
+    "url": "https://deadswitch.online",
+    "title": "DeadSwitch Inheritance Vault",
+    "chainId": 11155111,
+    "deployer": "DeadSwitch"
+  },
+  "metadata": {
+    "owner": "DeadSwitch — Decentralized Crypto Inheritance"
+  },
+  "domain": {
+    "name": "InheritanceVault",
+    "version": "1",
+    "chainId": 11155111,
+    "verifyingContract": "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7"
+  },
+  "formats": {
+    "heartbeat": {
+      "intent": "Send heartbeat — prove you are alive",
+      "fields": []
+    },
+    "claim": {
+      "intent": "Claim inheritance from vault",
+      "fields": [
+        { "path": "_worldIdNullifier", "label": "World ID Proof", "format": "raw" }
+      ]
+    }
+  }
+}

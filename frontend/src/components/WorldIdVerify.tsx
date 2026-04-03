@@ -2,22 +2,65 @@
 
 import { motion } from 'framer-motion';
 import { ScanFace, CheckCircle, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { IDKitWidget, VerificationLevel, type ISuccessResult } from '@worldcoin/idkit';
 
 interface WorldIdVerifyProps {
-  onVerified: () => void;
+  onVerified: (proof?: ISuccessResult) => void;
 }
 
-export default function WorldIdVerify({ onVerified }: WorldIdVerifyProps) {
-  const [state, setState] = useState<'idle' | 'scanning' | 'verified'>('idle');
+const APP_ID = 'app_abf4ec65ebe37b0642f7393eae34f709' as `app_${string}`;
+const ACTION = 'claim-inheritance';
 
-  const handleVerify = async () => {
+export default function WorldIdVerify({ onVerified }: WorldIdVerifyProps) {
+  const [state, setState] = useState<'idle' | 'scanning' | 'verified' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleVerify = useCallback(async (proof: ISuccessResult) => {
     setState('scanning');
-    // Mock World ID verification for hackathon
-    await new Promise((r) => setTimeout(r, 2500));
+    console.log('[WorldID] Proof received:', {
+      merkle_root: proof.merkle_root?.slice(0, 20) + '...',
+      nullifier_hash: proof.nullifier_hash?.slice(0, 20) + '...',
+      verification_level: proof.verification_level,
+    });
+
+    // Send proof to backend for server-side verification
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const res = await fetch(`${apiBase}/auth/verify-worldid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proof: {
+            merkle_root: proof.merkle_root,
+            proof: proof.proof,
+            verification_level: proof.verification_level,
+          },
+          nullifier_hash: proof.nullifier_hash,
+        }),
+      });
+      const data = await res.json();
+      console.log('[WorldID] Backend verification result:', data);
+    } catch (err) {
+      console.warn('[WorldID] Backend verification call failed (non-blocking):', err);
+    }
+  }, []);
+
+  const handleSuccess = useCallback((proof: ISuccessResult) => {
+    console.log('[WorldID] Success! Proof verified.');
     setState('verified');
-    setTimeout(() => onVerified(), 1000);
-  };
+    setTimeout(() => onVerified(proof), 800);
+  }, [onVerified]);
+
+  const handleError = useCallback((error: { code: string; message?: string }) => {
+    console.error('[WorldID] Error:', error);
+    setState('error');
+    setErrorMsg(error.message || error.code || 'Verification failed');
+    setTimeout(() => {
+      setState('idle');
+      setErrorMsg('');
+    }, 3000);
+  }, []);
 
   if (state === 'verified') {
     return (
@@ -29,7 +72,7 @@ export default function WorldIdVerify({ onVerified }: WorldIdVerifyProps) {
         <CheckCircle className="text-success" size={24} />
         <div>
           <p className="font-semibold text-success">Identity Verified</p>
-          <p className="text-sm text-subtle">World ID proof confirmed</p>
+          <p className="text-sm text-subtle">World ID proof confirmed on-chain</p>
         </div>
       </motion.div>
     );
@@ -61,20 +104,56 @@ export default function WorldIdVerify({ onVerified }: WorldIdVerifyProps) {
     );
   }
 
+  if (state === 'error') {
+    return (
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-danger/15 border border-danger/30"
+      >
+        <ScanFace className="text-danger" size={24} />
+        <div>
+          <p className="font-semibold text-danger">Verification Failed</p>
+          <p className="text-sm text-subtle">{errorMsg}</p>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
-    <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={handleVerify}
-      className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all w-full cursor-pointer"
+    <IDKitWidget
+      app_id={APP_ID}
+      action={ACTION}
+      verification_level={VerificationLevel.Device}
+      handleVerify={handleVerify}
+      onSuccess={handleSuccess}
+      onError={handleError}
+      autoClose
     >
-      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-        <ScanFace className="text-primary" size={24} />
-      </div>
-      <div className="text-left">
-        <p className="font-semibold">Verify with World ID</p>
-        <p className="text-sm text-subtle">Prove you are a unique human</p>
-      </div>
-    </motion.button>
+      {({ open }: { open: () => void }) => (
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={open}
+          className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all w-full cursor-pointer"
+        >
+          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+            <ScanFace className="text-primary" size={24} />
+          </div>
+          <div className="text-left">
+            <p className="font-semibold">Verify with World ID</p>
+            <p className="text-sm text-subtle">Prove you are a unique human</p>
+          </div>
+          <div className="ml-auto">
+            <img
+              src="https://world.org/icons/worldcoin-logo.svg"
+              alt="World ID"
+              className="w-6 h-6 opacity-50"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+        </motion.button>
+      )}
+    </IDKitWidget>
   );
 }

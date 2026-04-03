@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Shield, Siren, CheckCircle, Coins, User, Clock, Loader2 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 import WorldIdVerify from '@/components/WorldIdVerify';
 import VaultStatusBadge from '@/components/VaultStatusBadge';
 import Confetti from '@/components/Confetti';
@@ -21,6 +22,7 @@ interface VaultInfo {
 }
 
 export default function ClaimPage() {
+  const { t } = useI18n();
   const [vaultInput, setVaultInput] = useState('');
   const [searching, setSearching] = useState(false);
   const [vault, setVault] = useState<VaultInfo | null>(null);
@@ -69,15 +71,15 @@ export default function ClaimPage() {
       <Confetti active={showConfetti} />
 
       <div>
-        <h1 className="text-3xl font-bold">Claim Inheritance</h1>
-        <p className="text-muted mt-2">Enter a vault address to check if you can claim.</p>
+        <h1 className="text-3xl font-bold">{t('claim.title')}</h1>
+        <p className="text-muted mt-2">{t('claim.subtitle')}</p>
       </div>
 
       {/* Search */}
       <div className="flex gap-3">
         <input
           type="text"
-          placeholder="Vault address or ENS name..."
+          placeholder={t('claim.placeholder')}
           value={vaultInput}
           onChange={(e) => setVaultInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -89,7 +91,7 @@ export default function ClaimPage() {
           className="px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors flex items-center gap-2 cursor-pointer"
         >
           {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-          Search
+          {t('claim.search')}
         </button>
       </div>
 
@@ -107,7 +109,7 @@ export default function ClaimPage() {
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Shield size={16} className="text-primary" />
-                  Vault Information
+                  {t('claim.vault_info')}
                 </h3>
                 <VaultStatusBadge status={vault.status} />
               </div>
@@ -136,18 +138,18 @@ export default function ClaimPage() {
             {vault.status === 'ACTIVE' ? (
               <div className="bg-success/10 border border-success/20 rounded-2xl p-6 text-center">
                 <Shield className="text-success mx-auto mb-3" size={32} />
-                <h3 className="font-semibold text-success text-lg">This vault is active</h3>
+                <h3 className="font-semibold text-success text-lg">{t('claim.active_msg')}</h3>
                 <p className="text-sm text-muted mt-2">
-                  The owner is still checking in. Recovery is not available.
+                  {t('claim.active_desc')}
                 </p>
               </div>
             ) : vault.status === 'RECOVERY' ? (
               <div className="space-y-4">
                 <div className="bg-danger/10 border border-danger/20 rounded-2xl p-6 text-center">
                   <Siren className="text-danger mx-auto mb-3" size={32} />
-                  <h3 className="font-semibold text-danger text-lg">Recovery Mode Active</h3>
+                  <h3 className="font-semibold text-danger text-lg">{t('claim.recovery_msg')}</h3>
                   <p className="text-sm text-muted mt-2">
-                    The owner has not checked in for {vault.lastHeartbeat}. You may claim this inheritance.
+                    {t('claim.recovery_desc')} {vault.lastHeartbeat}. {t('claim.recovery_claim')}
                   </p>
                 </div>
 
@@ -166,11 +168,11 @@ export default function ClaimPage() {
                     {claiming ? (
                       <>
                         <Loader2 size={20} className="animate-spin" />
-                        Processing on-chain...
+                        {t('claim.processing')}
                       </>
                     ) : (
                       <>
-                        Claim Inheritance ({vault.balance} ETH)
+                        {t('claim.btn')} ({vault.balance} ETH)
                       </>
                     )}
                   </motion.button>
@@ -190,13 +192,12 @@ export default function ClaimPage() {
             <div className="w-24 h-24 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center mx-auto">
               <CheckCircle className="text-gold" size={48} />
             </div>
-            <h2 className="text-3xl font-bold">Inheritance Transferred</h2>
+            <h2 className="text-3xl font-bold">{t('claim.success_title')}</h2>
             <p className="text-muted text-lg">
-              <span className="text-foreground font-bold">{vault.balance} ETH</span> has been
-              securely transferred to your wallet.
+              <span className="text-foreground font-bold">{vault.balance} ETH</span> {t('claim.success_desc')}
             </p>
             <div className="bg-card border border-border rounded-xl p-4 max-w-sm mx-auto">
-              <p className="text-xs text-subtle">Transaction confirmed on-chain</p>
+              <p className="text-xs text-subtle">{t('claim.tx_confirmed')}</p>
               <p className="text-sm font-mono mt-1 text-success">Block #18,234,567</p>
             </div>
           </motion.div>

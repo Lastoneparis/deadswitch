@@ -6,6 +6,7 @@ import {
   Heart, Clock, Coins, User, Shield, Siren,
   Play, FastForward, UserCheck, Zap
 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 import VaultStatusBadge from '@/components/VaultStatusBadge';
 import HeartbeatButton from '@/components/HeartbeatButton';
 import CountdownTimer from '@/components/CountdownTimer';
@@ -26,6 +27,7 @@ const DEMO_VAULT = '0x7a3b...4f2e';
 const DEMO_OWNER = '0x1234...5678';
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<Status>('ACTIVE');
   const [lastHeartbeat, setLastHeartbeat] = useState('15 days ago');
   const [daysLeft, setDaysLeft] = useState(75);
@@ -133,8 +135,8 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Vault Dashboard</h1>
-          <p className="text-muted mt-1">Monitor and manage your inheritance vault</p>
+          <h1 className="text-3xl font-bold">{t('dash.title')}</h1>
+          <p className="text-muted mt-1">{t('dash.subtitle')}</p>
         </div>
         <VaultStatusBadge status={status} />
       </div>
@@ -144,7 +146,7 @@ export default function DashboardPage() {
         <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
           <div className="flex items-center gap-2 text-subtle text-sm">
             <Heart size={14} className="text-success" />
-            Last Heartbeat
+            {t('dash.last_heartbeat')}
           </div>
           <p className={`text-lg font-bold ${status === 'RECOVERY' ? 'text-danger' : ''}`}>
             {lastHeartbeat}
@@ -156,7 +158,7 @@ export default function DashboardPage() {
         <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
           <div className="flex items-center gap-2 text-subtle text-sm">
             <Coins size={14} className="text-warning" />
-            Balance
+            {t('dash.balance')}
           </div>
           <p className="text-lg font-bold">{balance} ETH</p>
           <p className="text-xs text-subtle">${(parseFloat(balance) * 3000).toLocaleString()}</p>
@@ -164,10 +166,10 @@ export default function DashboardPage() {
         <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
           <div className="flex items-center gap-2 text-subtle text-sm">
             <User size={14} className="text-gold" />
-            Beneficiary
+            {t('dash.beneficiary')}
           </div>
           <p className="text-lg font-bold font-mono">wife.eth</p>
-          <p className="text-xs text-success">World ID verified</p>
+          <p className="text-xs text-success">{t('dash.worldid_verified')}</p>
         </div>
       </div>
 
@@ -184,8 +186,8 @@ export default function DashboardPage() {
               <div className="w-32 h-32 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center mx-auto">
                 <Shield className="text-gold" size={56} />
               </div>
-              <h2 className="text-2xl font-bold text-gold">Inheritance Transferred</h2>
-              <p className="text-muted">3.2 ETH has been securely transferred to wife.eth</p>
+              <h2 className="text-2xl font-bold text-gold">{t('dash.inheritance_transferred')}</h2>
+              <p className="text-muted">3.2 ETH {t('dash.transferred_to')} wife.eth</p>
             </motion.div>
           ) : status === 'RECOVERY' ? (
             <motion.div
@@ -202,11 +204,11 @@ export default function DashboardPage() {
                 <Siren className="text-danger" size={56} />
               </motion.div>
               <div>
-                <h2 className="text-2xl font-bold text-danger">RECOVERY MODE ACTIVE</h2>
+                <h2 className="text-2xl font-bold text-danger">{t('dash.recovery_active')}</h2>
                 <p className="text-muted mt-2">
-                  The vault owner has not checked in for 93 days.
+                  {t('dash.recovery_desc')}
                   <br />
-                  Chainlink Automation has triggered recovery.
+                  {t('dash.chainlink_triggered')}
                 </p>
               </div>
 
@@ -223,7 +225,7 @@ export default function DashboardPage() {
                   onClick={handleClaim}
                   className="px-8 py-4 rounded-2xl bg-gold hover:bg-gold/90 text-black font-bold text-lg transition-colors cursor-pointer"
                 >
-                  Claim Inheritance
+                  {t('claim.btn')}
                 </motion.button>
               )}
             </motion.div>
@@ -242,7 +244,7 @@ export default function DashboardPage() {
       <div className="bg-card border border-border rounded-2xl p-6">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
           <Clock size={18} className="text-primary" />
-          Activity Timeline
+          {t('dash.timeline')}
         </h3>
         <div className="space-y-1">
           {timeline.map((event, i) => (
@@ -261,11 +263,11 @@ export default function DashboardPage() {
       <div className="bg-card border-2 border-dashed border-primary/30 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={18} className="text-primary" />
-          <h3 className="text-lg font-bold">Demo Controls</h3>
-          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">For Judges</span>
+          <h3 className="text-lg font-bold">{t('demo.title')}</h3>
+          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">{t('demo.for_judges')}</span>
         </div>
         <p className="text-sm text-muted mb-6">
-          Click these buttons to simulate the full lifecycle of a DeadSwitch vault.
+          {t('demo.desc')}
         </p>
         <div className="flex flex-wrap gap-4">
           <button
@@ -273,14 +275,14 @@ export default function DashboardPage() {
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-success/15 border border-success/30 text-success font-medium hover:bg-success/25 transition-colors cursor-pointer"
           >
             <Play size={16} />
-            Send Heartbeat
+            {t('demo.send_heartbeat')}
           </button>
           <button
             onClick={handleSimulateDeath}
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-danger/15 border border-danger/30 text-danger font-medium hover:bg-danger/25 transition-colors cursor-pointer"
           >
             <FastForward size={16} />
-            Simulate Death (90 days)
+            {t('demo.simulate_death')}
           </button>
           <button
             onClick={() => {
@@ -301,13 +303,13 @@ export default function DashboardPage() {
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold/15 border border-gold/30 text-gold font-medium hover:bg-gold/25 transition-colors cursor-pointer"
           >
             <UserCheck size={16} />
-            Claim as Heir
+            {t('demo.claim_heir')}
           </button>
           <button
             onClick={handleReset}
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-card border border-border text-muted font-medium hover:text-foreground transition-colors cursor-pointer"
           >
-            Reset Demo
+            {t('demo.reset')}
           </button>
         </div>
       </div>
