@@ -51,7 +51,8 @@ export async function verifyWorldId(
         }),
       });
 
-      const data = await response.json() as any;
+      const rawData = await response.json();
+      const data: { success?: boolean; detail?: string; code?: string } = rawData as { success?: boolean; detail?: string; code?: string };
       console.log(`[WorldID] API response:`, JSON.stringify(data));
 
       if (response.ok && data.success !== false) {
