@@ -1,0 +1,27 @@
+{
+  "name": "deadswitch",
+  "version": "1.0.0",
+  "description": "Decentralized crypto inheritance protocol — your crypto shouldn't die with you",
+  "private": true,
+  "scripts": {
+    "install:all": "cd contracts && npm install && cd ../backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "demo": "./scripts/demo.sh",
+    "build": "cd frontend && npm run build",
+    "start": "concurrently \"cd backend && npm start\" \"cd frontend && npm start\""
+  },
+  "keywords": [
+    "crypto",
+    "inheritance",
+    "dead-mans-switch",
+    "ethereum",
+    "chainlink",
+    "world-id",
+    "ethglobal"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

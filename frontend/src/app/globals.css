@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #0a0b12;
+  --color-foreground: #ffffff;
+  --color-card: #14161f;
+  --color-border: #1e2130;
+  --color-primary: #3b82f6;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-gold: #d4a76a;
+  --color-muted: #94a3b8;
+  --color-subtle: #64748b;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.7); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.8); }
+}
+
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.6); }
+}
+
+.pulse-green {
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+.pulse-red {
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+.pulse-amber {
+  animation: pulse-amber 1.5s ease-in-out infinite;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: confetti-fall 3s ease-in forwards;
+  z-index: 9999;
+}
