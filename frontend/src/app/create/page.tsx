@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAccount, useDeployContract, useWaitForTransactionReceipt, useBalance } from 'wagmi';
+import { useAccount, useDeployContract, useBalance, usePublicClient } from 'wagmi';
 import { parseEther, formatEther, keccak256, toBytes } from 'viem';
 import {
   Wallet, User, Clock, Coins, CheckCircle, ArrowRight, ArrowLeft, Shield,
@@ -85,7 +85,9 @@ export default function CreateVaultPage() {
 
   const [deployTxHash, setDeployTxHash] = useState<`0x${string}` | undefined>();
   const [deployError, setDeployError] = useState<string>('');
+  const [deployStatus, setDeployStatus] = useState<string>('');
   const { deployContractAsync } = useDeployContract();
+  const publicClient = usePublicClient();
 
   const handleDeploy = async () => {
     setDeployError('');
@@ -146,8 +148,22 @@ export default function CreateVaultPage() {
 
       console.log('Deploy tx hash:', hash);
       setDeployTxHash(hash);
+      setDeployStatus('Transaction sent. Waiting for block confirmation...');
 
-      // Register in backend database
+      // Wait for tx receipt to get the real deployed contract address
+      let deployedContractAddress: `0x${string}` | null = null;
+      if (publicClient) {
+        try {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          deployedContractAddress = receipt.contractAddress as `0x${string}` | null;
+          console.log('Deployed contract address:', deployedContractAddress);
+          setDeployStatus('Contract deployed! Registering vault...');
+        } catch (err) {
+          console.warn('Failed to wait for receipt:', err);
+        }
+      }
+
+      // Register in backend database WITH the real contract address
       try {
         await createVault({
           owner_address: address,
@@ -156,11 +172,12 @@ export default function CreateVaultPage() {
           balance: parseFloat(amount),
           beneficiary_ens: beneficiaryEns,
           world_id_nullifier: worldIdNullifier,
-          vault_address: hash,
+          vault_address: deployedContractAddress || undefined,
         });
       } catch { /* non-blocking */ }
 
-      setVaultAddress(hash);
+      // Display the real contract address, fallback to tx hash
+      setVaultAddress(deployedContractAddress || hash);
       setDeployed(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -199,10 +216,12 @@ export default function CreateVaultPage() {
           Remember to check in every <span className="text-foreground font-semibold">{interval} days</span> to keep your vault active.
         </p>
         <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-          <p className="text-xs text-subtle mb-1">Deployment Transaction</p>
+          <p className="text-xs text-subtle mb-1">{vaultAddress.length === 42 ? 'Your Vault Contract' : 'Deployment Transaction'}</p>
           <p className="font-mono text-xs break-all text-muted">{vaultAddress}</p>
           <a
-            href={`https://sepolia.etherscan.io/tx/${vaultAddress}`}
+            href={vaultAddress.length === 42
+              ? `https://sepolia.etherscan.io/address/${vaultAddress}`
+              : `https://sepolia.etherscan.io/tx/${vaultAddress}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -551,6 +570,12 @@ export default function CreateVaultPage() {
       </div>
 
       {/* Deploy error */}
+      {deployStatus && !deployError && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
+          <Loader2 size={16} className="text-primary animate-spin mt-0.5 shrink-0" />
+          <p className="text-sm text-primary">{deployStatus}</p>
+        </div>
+      )}
       {deployError && (
         <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20">
           <AlertTriangle size={16} className="text-danger mt-0.5 shrink-0" />
