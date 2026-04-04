@@ -95,6 +95,24 @@ export default function Home() {
       </section>
 
       {/* ═══════════════════════════════
+          VIDEO PITCH
+          ═══════════════════════════════ */}
+      <section className="max-w-4xl mx-auto">
+        <p className="text-xs text-subtle uppercase tracking-[0.2em] mb-6">Watch the pitch</p>
+        <div className="rounded-2xl overflow-hidden border border-border bg-card">
+          <video
+            controls
+            preload="metadata"
+            poster="/logo-full.png"
+            className="w-full aspect-video"
+          >
+            <source src="/video-pitch.mp4" type="video/mp4" />
+            Your browser does not support video playback.
+          </video>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════
           HOW IT WORKS — 3 steps, left-aligned
           ═══════════════════════════════ */}
       <section className="max-w-4xl mx-auto">

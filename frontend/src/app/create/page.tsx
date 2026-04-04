@@ -78,19 +78,46 @@ export default function CreateVaultPage() {
   };
 
   const [deployTxHash, setDeployTxHash] = useState<`0x${string}` | undefined>();
+  const [deployError, setDeployError] = useState<string>('');
   const { deployContractAsync } = useDeployContract();
 
   const handleDeploy = async () => {
-    if (!address || !isConnected) return;
+    setDeployError('');
+    if (!address || !isConnected) {
+      setDeployError('Wallet not connected. Please connect your wallet first.');
+      return;
+    }
+
+    const beneficiaryAddr = ensResolved?.address || beneficiary;
+
+    // Validate beneficiary is not self
+    if (beneficiaryAddr.toLowerCase() === address.toLowerCase()) {
+      setDeployError('Beneficiary cannot be your own wallet address. Enter a different address or ENS name.');
+      return;
+    }
+
+    // Validate minimum interval (contract requires >= 30 days)
+    if (interval < 30) {
+      setDeployError('Heartbeat interval must be at least 30 days.');
+      return;
+    }
+
     setDeploying(true);
     try {
-      const beneficiaryAddr = ensResolved?.address || beneficiary;
       const beneficiaryEns = ensResolved?.name || (beneficiary.endsWith('.eth') ? beneficiary : undefined);
       const heartbeatSecs = BigInt(interval * 86400);
       const worldIdNullifier = keccak256(toBytes(`deadswitch-${address}-${beneficiaryAddr}`));
       const depositWei = parseEther(amount);
 
-      // Deploy real on-chain contract from user's wallet
+      console.log('Deploying vault with:', {
+        beneficiary: beneficiaryAddr,
+        heartbeatSecs: heartbeatSecs.toString(),
+        worldIdNullifier,
+        depositWei: depositWei.toString(),
+        from: address,
+      });
+
+      // This should trigger MetaMask popup
       const hash = await deployContractAsync({
         abi: VAULT_DEPLOY_ABI,
         bytecode: VAULT_BYTECODE,
@@ -98,15 +125,16 @@ export default function CreateVaultPage() {
           beneficiaryAddr as `0x${string}`,
           heartbeatSecs,
           worldIdNullifier,
-          '', // ownerENS (resolved later)
+          '',
           beneficiaryEns || '',
         ],
         value: depositWei,
       });
 
+      console.log('Deploy tx hash:', hash);
       setDeployTxHash(hash);
 
-      // Register in backend database with nullifier + tx hash
+      // Register in backend database
       try {
         await createVault({
           owner_address: address,
@@ -115,16 +143,26 @@ export default function CreateVaultPage() {
           balance: parseFloat(amount),
           beneficiary_ens: beneficiaryEns,
           world_id_nullifier: worldIdNullifier,
-          vault_address: hash, // tx hash now, contract address resolved later
+          vault_address: hash,
         });
-      } catch { /* backend registration - non-blocking */ }
+      } catch { /* non-blocking */ }
 
-      // Show the tx hash immediately, contract address comes after confirmation
       setVaultAddress(hash);
       setDeployed(true);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('Deploy failed:', err);
-      // If user rejected or gas issue, don't show success
+
+      // User-friendly error messages
+      if (msg.includes('User rejected') || msg.includes('User denied')) {
+        setDeployError('Transaction rejected. You need to approve the transaction in MetaMask.');
+      } else if (msg.includes('insufficient funds')) {
+        setDeployError('Insufficient Sepolia ETH. Get testnet ETH from sepoliafaucet.com');
+      } else if (msg.includes('chain')) {
+        setDeployError('Wrong network. Please switch to Sepolia testnet in MetaMask.');
+      } else {
+        setDeployError(`Deploy failed: ${msg.slice(0, 150)}`);
+      }
       setDeploying(false);
       return;
     }
@@ -451,6 +489,14 @@ export default function CreateVaultPage() {
           </button>
         )}
       </div>
+
+      {/* Deploy error */}
+      {deployError && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20">
+          <AlertTriangle size={16} className="text-danger mt-0.5 shrink-0" />
+          <p className="text-sm text-danger">{deployError}</p>
+        </div>
+      )}
     </div>
   );
 }
