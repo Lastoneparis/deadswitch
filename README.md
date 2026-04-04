@@ -81,7 +81,7 @@ Chainlink Automation (checks every 30 days)
 |---------|------|-------------|--------|
 | **Chainlink** | Dead man's switch timer — checkUpkeep/performUpkeep | `/api/chainlink/status` | ✅ Contract deployed |
 | **World ID** | Anti-bot heir verification — real IDKit widget | `/api/auth/verify-worldid` | ✅ Staging app live |
-| **Ledger** | EIP-712 Clear Signing for heartbeat + claim | `/api/ledger/manifest` | ✅ Manifest served |
+| **Ledger** | ERC-7730 Clear Signing for all vault functions | `/api/ledger/manifest` | ✅ PR [#2511](https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/2511) submitted |
 | **0G** | Encrypted key shard storage with fallback | `/api/zerog/status` | ✅ SDK integrated |
 | **ENS** | "hugo.eth → wife.eth" human-readable inheritance | `/api/ens/resolve/:name` | ✅ Real resolution |
 | **Flare** | TEE attestation for key reconstruction | `/api/flare/tee-info` | ✅ Hash chain verified |
