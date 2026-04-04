@@ -100,6 +100,14 @@ export async function searchVaultsByAddress(address: string): Promise<{ vaults: 
   return request(`/vaults/owner/${address.toLowerCase()}`);
 }
 
+// Cancel vault (owner only — returns funds)
+export async function cancelVault(vaultId: string, ownerAddress: string) {
+  return request('/vault/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ vault_id: vaultId, owner_address: ownerAddress }),
+  });
+}
+
 // Demo reset (for judges — resets vault to active)
 export async function demoReset(vaultId: string) {
   return request('/vault/demo-reset', {

@@ -15,7 +15,7 @@ import { VAULT_ADDRESS, VAULT_ABI, CHAINLINK_ETH_USD_SEPOLIA, CHAINLINK_PRICE_FE
 import HeartbeatButton from '@/components/HeartbeatButton';
 import WorldIdVerify from '@/components/WorldIdVerify';
 import Confetti from '@/components/Confetti';
-import { getUserVaults, sendHeartbeat, simulateDeath, claimInheritance, demoReset, VaultData } from '@/lib/api';
+import { getUserVaults, sendHeartbeat, simulateDeath, claimInheritance, demoReset, cancelVault, VaultData } from '@/lib/api';
 
 type Status = 'active' | 'recovery' | 'claimed' | 'cancelled';
 
@@ -59,6 +59,43 @@ function TxNotification({ hash, label }: { hash: string; label: string }) {
         Etherscan <ExternalLink size={10} />
       </a>
     </motion.div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Live Countdown (days, hours, minutes, seconds)
+   ────────────────────────────────────────────── */
+function LiveCountdown({ targetTimestamp, t }: { targetTimestamp: number; t: (k: string) => string }) {
+  const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const remaining = Math.max(0, targetTimestamp - now);
+  const days = Math.floor(remaining / 86400);
+  const hours = Math.floor((remaining % 86400) / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  const seconds = remaining % 60;
+  const expired = remaining <= 0;
+
+  const color = expired ? 'text-danger' : days <= 7 ? 'text-danger' : days <= 30 ? 'text-warning' : 'text-foreground';
+
+  return (
+    <div>
+      <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.next_checkin')}</p>
+      <p className={`text-2xl font-bold tabular-nums font-mono ${color}`}>
+        {expired ? t('dash.expired') : (
+          <>
+            {days > 0 && <>{days}<span className="text-base font-medium text-subtle">d </span></>}
+            {String(hours).padStart(2, '0')}<span className="text-base font-medium text-subtle">h </span>
+            {String(minutes).padStart(2, '0')}<span className="text-base font-medium text-subtle">m </span>
+            {String(seconds).padStart(2, '0')}<span className="text-base font-medium text-subtle">s</span>
+          </>
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -394,6 +431,7 @@ export default function DashboardPage() {
   const heartbeatIntervalDays = vault ? Math.round(vault.heartbeat_interval / 86400) : 90;
   const timeUntilRecovery = vault?.time_until_recovery ?? (vault ? vault.heartbeat_interval - (Math.floor(Date.now() / 1000) - vault.last_heartbeat) : 0);
   const daysLeft = Math.max(0, Math.round(timeUntilRecovery / 86400));
+  const deadlineTimestamp = vault ? vault.last_heartbeat + vault.heartbeat_interval : 0;
   const lastHeartbeatDate = vault ? new Date(vault.last_heartbeat * 1000) : null;
   const lastHeartbeatLabel = lastHeartbeatDate
     ? (Date.now() - lastHeartbeatDate.getTime() < 60000 ? t('dash.just_now') : `${Math.round((Date.now() - lastHeartbeatDate.getTime()) / 86400000)} ${t('dash.days_ago')}`)
@@ -572,12 +610,7 @@ export default function DashboardPage() {
           {/* Key metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             <div className="min-w-0">
-              <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.next_checkin')}</p>
-              <p className={`text-2xl font-bold tabular-nums ${
-                daysLeft <= 7 ? 'text-danger' : daysLeft <= 30 ? 'text-warning' : 'text-foreground'
-              }`}>
-                {daysLeft > 0 ? `${daysLeft} ${t('dash.days')}` : t('dash.expired')}
-              </p>
+              <LiveCountdown targetTimestamp={deadlineTimestamp} t={t} />
             </div>
             <div className="min-w-0">
               <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.protected_assets')}</p>
@@ -776,6 +809,49 @@ export default function DashboardPage() {
                           </motion.div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cancel Vault — danger zone */}
+                {vault.status === 'active' && vault.owner_address.toLowerCase() === address?.toLowerCase() && (
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-xs text-danger uppercase tracking-wider mb-3">Danger Zone</p>
+                    <div className="bg-danger/5 border border-danger/20 rounded-xl p-4 space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-danger">Cancel Vault</p>
+                        <p className="text-xs text-muted mt-1">
+                          Cancel this vault and withdraw your funds. This action cannot be undone. Use this if you entered the wrong beneficiary address or ENS name.
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Are you sure you want to cancel this vault? Your funds will be returned and the beneficiary will lose access.')) return;
+                          try {
+                            // On-chain cancel if vault has contract address
+                            if (vault.vault_address) {
+                              try {
+                                const hash = await writeContractAsync({
+                                  address: vault.vault_address as `0x${string}`,
+                                  abi: VAULT_ABI,
+                                  functionName: 'cancel',
+                                });
+                                addTx(hash, 'Cancel');
+                              } catch (err) {
+                                console.warn('On-chain cancel failed:', err);
+                              }
+                            }
+                            await cancelVault(vault.id, address!);
+                            showFeedback('Vault cancelled — funds returned', 'warning');
+                            await refreshVault();
+                          } catch {
+                            showFeedback('Failed to cancel vault', 'danger');
+                          }
+                        }}
+                        className="px-4 py-2 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm font-semibold hover:bg-danger/20 transition-all cursor-pointer"
+                      >
+                        Cancel Vault & Withdraw
+                      </button>
                     </div>
                   </div>
                 )}
