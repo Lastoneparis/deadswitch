@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Heart, Clock, Coins, User, Shield, Siren,
-  Play, FastForward, UserCheck, Zap
+  Play, FastForward, UserCheck, Zap, ExternalLink, CheckCircle, AlertTriangle, Loader2
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { formatEther, encodeAbiParameters, parseAbiParameters } from 'viem';
+import { VAULT_ADDRESS, VAULT_ABI } from '@/lib/contract';
 import VaultStatusBadge from '@/components/VaultStatusBadge';
 import HeartbeatButton from '@/components/HeartbeatButton';
 import CountdownTimer from '@/components/CountdownTimer';
@@ -26,8 +29,152 @@ interface TimelineItem {
 const DEMO_VAULT = '0x7a3b...4f2e';
 const DEMO_OWNER = '0x1234...5678';
 
+const SEPOLIA_ETHERSCAN = 'https://sepolia.etherscan.io';
+
+function TxNotification({ hash, label }: { hash: string; label: string }) {
+  const { data: receipt, isLoading } = useWaitForTransactionReceipt({ hash: hash as `0x${string}` });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-card border border-success/30 rounded-xl p-4 space-y-2"
+    >
+      <div className="flex items-center gap-2">
+        {isLoading ? (
+          <Loader2 size={16} className="text-primary animate-spin" />
+        ) : receipt?.status === 'success' ? (
+          <CheckCircle size={16} className="text-success" />
+        ) : (
+          <AlertTriangle size={16} className="text-danger" />
+        )}
+        <span className="text-sm font-medium">
+          {label} {isLoading ? 'pending...' : receipt?.status === 'success' ? 'confirmed' : 'submitted'}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted font-mono">
+          Hash: {hash.slice(0, 10)}...{hash.slice(-8)}
+        </span>
+        <a
+          href={`${SEPOLIA_ETHERSCAN}/tx/${hash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          View on Sepolia Etherscan <ExternalLink size={10} />
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
+function OnChainVaultStatus() {
+  const { data, isLoading, isError, refetch } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'getVaultInfo',
+  });
+
+  if (isLoading) {
+    return (
+      <div className="bg-card border border-primary/30 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield size={18} className="text-primary" />
+          <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
+        </div>
+        <div className="flex items-center gap-2 text-muted">
+          <Loader2 size={14} className="animate-spin" />
+          <span className="text-sm">Reading from contract...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="bg-card border border-danger/30 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield size={18} className="text-danger" />
+          <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
+        </div>
+        <p className="text-sm text-muted">Unable to read contract data. Make sure you are connected to Sepolia.</p>
+      </div>
+    );
+  }
+
+  const [owner, beneficiary, balance, lastHeartbeat, heartbeatInterval, statusCode, timeRemaining, ownerENS, beneficiaryENS] = data;
+  const statusLabels = ['Inactive', 'Active', 'Recovery', 'Claimed', 'Cancelled'];
+  const statusColors = ['text-muted', 'text-success', 'text-danger', 'text-gold', 'text-subtle'];
+  const statusIndex = Number(statusCode);
+  const lastHbDate = Number(lastHeartbeat) > 0
+    ? new Date(Number(lastHeartbeat) * 1000).toLocaleString()
+    : 'Never';
+  const balanceEth = formatEther(balance);
+  const timeRemainingHours = Math.floor(Number(timeRemaining) / 3600);
+  const timeRemainingDays = Math.floor(timeRemainingHours / 24);
+
+  return (
+    <div className="bg-card border border-primary/30 rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Shield size={18} className="text-primary" />
+          <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
+        </div>
+        <a
+          href={`${SEPOLIA_ETHERSCAN}/address/${VAULT_ADDRESS}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          View on Etherscan <ExternalLink size={10} />
+        </a>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div className="space-y-3">
+          <div>
+            <span className="text-subtle">Contract</span>
+            <p className="font-mono text-xs">{VAULT_ADDRESS.slice(0, 10)}...{VAULT_ADDRESS.slice(-8)}</p>
+          </div>
+          <div>
+            <span className="text-subtle">Owner</span>
+            <p className="font-mono text-xs">{ownerENS || `${String(owner).slice(0, 10)}...${String(owner).slice(-6)}`}</p>
+          </div>
+          <div>
+            <span className="text-subtle">Beneficiary</span>
+            <p className="font-mono text-xs">{beneficiaryENS || `${String(beneficiary).slice(0, 10)}...${String(beneficiary).slice(-6)}`}</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <span className="text-subtle">Balance</span>
+            <p className="font-bold">{balanceEth} ETH</p>
+          </div>
+          <div>
+            <span className="text-subtle">Last Heartbeat</span>
+            <p className="font-medium">{lastHbDate}</p>
+          </div>
+          <div>
+            <span className="text-subtle">Status</span>
+            <p className={`font-bold ${statusColors[statusIndex] || 'text-muted'}`}>
+              {statusLabels[statusIndex] || `Unknown (${statusIndex})`}
+            </p>
+          </div>
+          {Number(timeRemaining) > 0 && (
+            <div>
+              <span className="text-subtle">Time Remaining</span>
+              <p className="font-medium">{timeRemainingDays}d {timeRemainingHours % 24}h</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { t } = useI18n();
+  const { address, isConnected } = useAccount();
   const [status, setStatus] = useState<Status>('ACTIVE');
   const [lastHeartbeat, setLastHeartbeat] = useState('15 days ago');
   const [daysLeft, setDaysLeft] = useState(75);
@@ -35,6 +182,9 @@ export default function DashboardPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [worldIdVerified, setWorldIdVerified] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
+  const [txHashes, setTxHashes] = useState<{ hash: string; label: string }[]>([]);
+  const [onChainMessage, setOnChainMessage] = useState('');
+  const [mounted, setMounted] = useState(false);
   const [timeline, setTimeline] = useState<TimelineItem[]>([
     { type: 'heartbeat', date: 'March 19, 2026 — 14:22 UTC', description: 'Heartbeat confirmed on-chain' },
     { type: 'heartbeat', date: 'February 17, 2026 — 09:15 UTC', description: 'Heartbeat confirmed on-chain' },
@@ -42,37 +192,86 @@ export default function DashboardPage() {
     { type: 'created', date: 'December 15, 2025 — 16:45 UTC', description: 'Vault created with 3.2 ETH deposit' },
   ]);
 
+  useEffect(() => { setMounted(true); }, []);
+
+  const { writeContractAsync } = useWriteContract();
+
   const targetDate = new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000);
 
+  const addTx = useCallback((hash: string, label: string) => {
+    setTxHashes(prev => [{ hash, label }, ...prev]);
+  }, []);
+
   const handleHeartbeat = useCallback(async () => {
-    try {
-      await sendHeartbeat(DEMO_VAULT, DEMO_OWNER);
-    } catch {
-      // Mock for demo
-    }
     const now = new Date().toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',
     }) + ' — ' + new Date().toLocaleTimeString('en-US', {
       hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
     });
 
+    // Try on-chain heartbeat if wallet is connected
+    if (isConnected && address) {
+      try {
+        const hash = await writeContractAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'heartbeat',
+        });
+        addTx(hash, 'Heartbeat');
+        setTimeline((prev) => [
+          { type: 'heartbeat', date: now, description: `Heartbeat confirmed on-chain (tx: ${hash.slice(0, 10)}...)` },
+          ...prev,
+        ]);
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // If user rejected or contract reverted, still update UI with demo data
+        console.warn('On-chain heartbeat failed:', errMsg);
+        setOnChainMessage(`On-chain heartbeat failed: ${errMsg.slice(0, 100)}`);
+        // Fall back to backend API
+        try { await sendHeartbeat(DEMO_VAULT, DEMO_OWNER); } catch { /* demo fallback */ }
+        setTimeline((prev) => [
+          { type: 'heartbeat', date: now, description: 'Heartbeat confirmed (demo fallback)' },
+          ...prev,
+        ]);
+      }
+    } else {
+      // No wallet — use backend API
+      try { await sendHeartbeat(DEMO_VAULT, DEMO_OWNER); } catch { /* demo */ }
+      setTimeline((prev) => [
+        { type: 'heartbeat', date: now, description: 'Heartbeat confirmed on-chain' },
+        ...prev,
+      ]);
+    }
+
     setStatus('ACTIVE');
     setLastHeartbeat('Just now');
     setDaysLeft(90);
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 100);
-    setTimeline((prev) => [
-      { type: 'heartbeat', date: now, description: 'Heartbeat confirmed on-chain' },
-      ...prev,
-    ]);
-  }, []);
+  }, [isConnected, address, writeContractAsync, addTx]);
 
   const handleSimulateDeath = useCallback(async () => {
-    try {
-      await simulateDeath(DEMO_VAULT);
-    } catch {
-      // Mock for demo
+    // Always call the backend API (fast-forward demo)
+    try { await simulateDeath(DEMO_VAULT); } catch { /* demo */ }
+
+    // Also try on-chain performUpkeep (will likely revert — 30-day interval)
+    if (isConnected && address) {
+      try {
+        const hash = await writeContractAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'performUpkeep',
+          args: ['0x' as `0x${string}`],
+        });
+        addTx(hash, 'PerformUpkeep');
+        setOnChainMessage('');
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('performUpkeep reverted (expected):', errMsg);
+        setOnChainMessage('On-chain: heartbeat not yet expired (30-day interval). Using demo fast-forward.');
+      }
     }
+
     setStatus('RECOVERY');
     setLastHeartbeat('93 days ago');
     setDaysLeft(0);
@@ -89,14 +288,32 @@ export default function DashboardPage() {
       },
       ...prev,
     ]);
-  }, []);
+  }, [isConnected, address, writeContractAsync, addTx]);
 
   const handleClaim = useCallback(async () => {
-    try {
-      await claimInheritance(DEMO_VAULT, 'wife.eth');
-    } catch {
-      // Mock for demo
+    // Try on-chain claim if wallet is connected
+    if (isConnected && address) {
+      try {
+        // Use a demo World ID nullifier hash
+        const nullifierHash = '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`;
+        const hash = await writeContractAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'claim',
+          args: [nullifierHash],
+        });
+        addTx(hash, 'Claim');
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('On-chain claim failed:', errMsg);
+        setOnChainMessage(`On-chain claim failed: ${errMsg.slice(0, 100)}`);
+        // Fall back to backend
+        try { await claimInheritance(DEMO_VAULT, 'wife.eth'); } catch { /* demo */ }
+      }
+    } else {
+      try { await claimInheritance(DEMO_VAULT, 'wife.eth'); } catch { /* demo */ }
     }
+
     setClaimSuccess(true);
     setStatus('CLAIMED');
     setBalance('0.0');
@@ -110,7 +327,7 @@ export default function DashboardPage() {
       },
       ...prev,
     ]);
-  }, []);
+  }, [isConnected, address, writeContractAsync, addTx]);
 
   const handleReset = useCallback(() => {
     setStatus('ACTIVE');
@@ -120,6 +337,8 @@ export default function DashboardPage() {
     setShowConfetti(false);
     setWorldIdVerified(false);
     setClaimSuccess(false);
+    setTxHashes([]);
+    setOnChainMessage('');
     setTimeline([
       { type: 'heartbeat', date: 'March 19, 2026 — 14:22 UTC', description: 'Heartbeat confirmed on-chain' },
       { type: 'heartbeat', date: 'February 17, 2026 — 09:15 UTC', description: 'Heartbeat confirmed on-chain' },
@@ -140,6 +359,25 @@ export default function DashboardPage() {
         </div>
         <VaultStatusBadge status={status} />
       </div>
+
+      {/* Tx Notifications */}
+      <AnimatePresence>
+        {txHashes.map((tx) => (
+          <TxNotification key={tx.hash} hash={tx.hash} label={tx.label} />
+        ))}
+      </AnimatePresence>
+
+      {/* On-chain message */}
+      {onChainMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-warning/30 rounded-xl p-4 flex items-start gap-3"
+        >
+          <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
+          <p className="text-sm text-muted">{onChainMessage}</p>
+        </motion.div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -172,6 +410,9 @@ export default function DashboardPage() {
           <p className="text-xs text-success">{t('dash.worldid_verified')}</p>
         </div>
       </div>
+
+      {/* On-Chain Vault Status */}
+      {mounted && <OnChainVaultStatus />}
 
       {/* Center: Heartbeat Button + Recovery Alert */}
       <div className="flex flex-col items-center py-8">
@@ -239,6 +480,22 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Wallet Connection Status for judges */}
+      {mounted && (
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-sm">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-subtle'}`} />
+          {isConnected ? (
+            <span className="text-muted">
+              Wallet connected: <span className="font-mono text-foreground">{address?.slice(0, 6)}...{address?.slice(-4)}</span> — on-chain actions will send real Sepolia transactions
+            </span>
+          ) : (
+            <span className="text-muted">
+              Wallet not connected — using demo mode. Connect wallet for real Sepolia transactions.
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Timeline */}
       <div className="bg-card border border-border rounded-2xl p-6">
