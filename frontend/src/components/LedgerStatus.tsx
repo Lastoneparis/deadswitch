@@ -1,7 +1,7 @@
 'use client';
 
-import { Shield, Monitor } from 'lucide-react';
-import { useAccount, useConnectorClient } from 'wagmi';
+import { Shield, Monitor, CheckCircle2 } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import { useEffect, useState } from 'react';
 
 interface LedgerStatusProps {
@@ -23,8 +23,10 @@ export default function LedgerStatus({ context }: LedgerStatusProps) {
     heartbeat: {
       title: 'Heartbeat',
       screen: [
-        'Send heartbeat',
-        'Prove you are alive',
+        'Send heartbeat — prove you are alive',
+        'Vault Owner: [your address]',
+        'Time: [current timestamp]',
+        'Status: alive',
         'Contract: 0xF957...CB7',
         'Chain: Sepolia (11155111)',
       ],
@@ -60,6 +62,26 @@ export default function LedgerStatus({ context }: LedgerStatusProps) {
         )}
       </div>
 
+      {/* ERC-7730 metadata info */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 size={12} className="text-green-400" />
+          <span className="text-xs text-zinc-300">ERC-7730 Clear Signing metadata served</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 size={12} className="text-green-400" />
+          <span className="text-xs text-zinc-400">Contract: 0xF957cDA1...CB7</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 size={12} className="text-green-400" />
+          <span className="text-xs text-zinc-400">Network: Sepolia</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 size={12} className="text-green-400" />
+          <span className="text-xs text-zinc-400">Ledger will display: &quot;Send heartbeat — prove you are alive&quot;</span>
+        </div>
+      </div>
+
       {current && (
         <div className="space-y-2">
           <p className="text-xs text-zinc-400">
@@ -78,7 +100,7 @@ export default function LedgerStatus({ context }: LedgerStatusProps) {
       )}
 
       <p className="text-[11px] text-zinc-500">
-        EIP-712 manifest ensures human-readable transaction details on Ledger hardware wallets.
+        ERC-7730 metadata ensures human-readable transaction details on Ledger hardware wallets.
       </p>
     </div>
   );

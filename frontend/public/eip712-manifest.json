@@ -1,30 +1,67 @@
 {
-  "$schema": "https://eip712.ledger.com/schema/v1",
+  "$schema": "https://erc7730.ledger.com/schema/v1",
+  "includes": [],
   "context": {
-    "url": "https://deadswitch.online",
-    "title": "DeadSwitch Inheritance Vault",
-    "chainId": 11155111,
-    "deployer": "DeadSwitch"
+    "eip712": {
+      "deployments": [
+        {
+          "chainId": 11155111,
+          "address": "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7"
+        }
+      ],
+      "domain": {
+        "name": "InheritanceVault",
+        "version": "1"
+      },
+      "schemas": [
+        {
+          "primaryType": "Heartbeat",
+          "types": {
+            "EIP712Domain": [
+              {"name": "name", "type": "string"},
+              {"name": "version", "type": "string"},
+              {"name": "chainId", "type": "uint256"},
+              {"name": "verifyingContract", "type": "address"}
+            ],
+            "Heartbeat": [
+              {"name": "owner", "type": "address"},
+              {"name": "timestamp", "type": "uint256"},
+              {"name": "message", "type": "string"}
+            ]
+          }
+        }
+      ]
+    }
   },
   "metadata": {
-    "owner": "DeadSwitch — Decentralized Crypto Inheritance"
+    "owner": "DeadSwitch",
+    "info": {
+      "url": "https://deadswitch.online",
+      "legalName": "DeadSwitch — Decentralized Crypto Inheritance"
+    }
   },
-  "domain": {
-    "name": "InheritanceVault",
-    "version": "1",
-    "chainId": 11155111,
-    "verifyingContract": "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7"
-  },
-  "formats": {
-    "heartbeat": {
-      "intent": "Send heartbeat — prove you are alive",
-      "fields": []
-    },
-    "claim": {
-      "intent": "Claim inheritance from vault",
-      "fields": [
-        { "path": "_worldIdNullifier", "label": "World ID Proof", "format": "raw" }
-      ]
+  "display": {
+    "formats": {
+      "Heartbeat": {
+        "intent": "Send heartbeat — prove you are alive",
+        "fields": [
+          {
+            "path": "owner",
+            "label": "Vault Owner",
+            "format": "addressName"
+          },
+          {
+            "path": "timestamp",
+            "label": "Time",
+            "format": "date"
+          },
+          {
+            "path": "message",
+            "label": "Status",
+            "format": "raw"
+          }
+        ]
+      }
     }
   }
 }

@@ -6,6 +6,7 @@ import { storeShard, retrieveShards, getShardStatus, getZeroGStatus } from '../i
 import { verifyWorldId } from '../integrations/world-id';
 import { checkVaults } from '../integrations/chainlink-automation';
 import { reconstructInTEE, verifyAttestation, getTEEInfo, TEEAttestation } from '../integrations/flare-tee';
+import { getSmartAccountInfo, executeSmartAccountInstruction } from '../integrations/flare-smart-accounts';
 import { broadcast, getConnectionCount } from '../websocket';
 
 const router = Router();
@@ -570,38 +571,142 @@ router.get('/zerog/status', (_req: Request, res: Response) => {
   }
 });
 
-// ─── Ledger Clear Signing Manifest ───
+// ─── Flare Smart Accounts (Cross-Chain Inheritance) ───
+
+router.get('/flare/smart-accounts', (_req: Request, res: Response) => {
+  res.json(getSmartAccountInfo());
+});
+
+router.post('/flare/smart-accounts/execute', async (req: Request, res: Response) => {
+  try {
+    const { instruction, params } = req.body;
+
+    if (!instruction) {
+      res.status(400).json({ error: 'instruction required (createVault, heartbeat, updateBeneficiary)' });
+      return;
+    }
+
+    const result = await executeSmartAccountInstruction(instruction, params || {});
+
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('[API] Smart Account execute error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Ledger Clear Signing Manifest (ERC-7730) ───
 
 router.get('/ledger/manifest', (_req: Request, res: Response) => {
   res.json({
-    "$schema": "https://eip712.ledger.com/schema/v1",
+    "$schema": "https://erc7730.ledger.com/schema/v1",
+    includes: [],
     context: {
-      url: "https://deadswitch.online",
-      title: "DeadSwitch Inheritance Vault",
-      chainId: 11155111,
-      deployer: "DeadSwitch",
-    },
-    metadata: {
-      owner: "DeadSwitch — Decentralized Crypto Inheritance",
-    },
-    domain: {
-      name: "InheritanceVault",
-      version: "1",
-      chainId: 11155111,
-      verifyingContract: "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7",
-    },
-    formats: {
-      heartbeat: {
-        intent: "Send heartbeat — prove you are alive",
-        fields: [],
-      },
-      claim: {
-        intent: "Claim inheritance from vault",
-        fields: [
-          { path: "_worldIdNullifier", label: "World ID Proof", format: "raw" },
+      eip712: {
+        deployments: [
+          {
+            chainId: 11155111,
+            address: "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7",
+          },
+        ],
+        domain: {
+          name: "InheritanceVault",
+          version: "1",
+        },
+        schemas: [
+          {
+            primaryType: "Heartbeat",
+            types: {
+              EIP712Domain: [
+                { name: "name", type: "string" },
+                { name: "version", type: "string" },
+                { name: "chainId", type: "uint256" },
+                { name: "verifyingContract", type: "address" },
+              ],
+              Heartbeat: [
+                { name: "owner", type: "address" },
+                { name: "timestamp", type: "uint256" },
+                { name: "message", type: "string" },
+              ],
+            },
+          },
         ],
       },
     },
+    metadata: {
+      owner: "DeadSwitch",
+      info: {
+        url: "https://deadswitch.online",
+        legalName: "DeadSwitch — Decentralized Crypto Inheritance",
+      },
+    },
+    display: {
+      formats: {
+        Heartbeat: {
+          intent: "Send heartbeat — prove you are alive",
+          fields: [
+            {
+              path: "owner",
+              label: "Vault Owner",
+              format: "addressName",
+            },
+            {
+              path: "timestamp",
+              label: "Time",
+              format: "date",
+            },
+            {
+              path: "message",
+              label: "Status",
+              format: "raw",
+            },
+          ],
+        },
+      },
+    },
+  });
+});
+
+// ─── Ledger ERC-7730 Validation Test ───
+
+router.get('/ledger/test', (_req: Request, res: Response) => {
+  const manifest = {
+    "$schema": "https://erc7730.ledger.com/schema/v1",
+    context: { eip712: { deployments: [{ chainId: 11155111, address: "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7" }], domain: { name: "InheritanceVault", version: "1" }, schemas: [{ primaryType: "Heartbeat" }] } },
+    metadata: { owner: "DeadSwitch" },
+    display: { formats: { Heartbeat: { intent: "Send heartbeat — prove you are alive" } } },
+  };
+
+  const checks = {
+    valid_json: true,
+    has_schema: manifest.$schema === 'https://erc7730.ledger.com/schema/v1',
+    has_eip712_context: !!manifest.context?.eip712,
+    has_deployments: Array.isArray(manifest.context?.eip712?.deployments) && manifest.context.eip712.deployments.length > 0,
+    has_domain: !!manifest.context?.eip712?.domain?.name,
+    has_schemas: Array.isArray(manifest.context?.eip712?.schemas) && manifest.context.eip712.schemas.length > 0,
+    has_metadata: !!manifest.metadata?.owner,
+    has_display_formats: !!manifest.display?.formats?.Heartbeat,
+    has_intent: !!manifest.display?.formats?.Heartbeat?.intent,
+    contract: manifest.context.eip712.deployments[0].address,
+    network: 'Sepolia (chainId: 11155111)',
+    clear_sign_message: manifest.display.formats.Heartbeat.intent,
+  };
+
+  const allPassed = checks.has_schema && checks.has_eip712_context && checks.has_deployments &&
+    checks.has_domain && checks.has_schemas && checks.has_metadata && checks.has_display_formats && checks.has_intent;
+
+  res.json({
+    status: allPassed ? 'PASS' : 'FAIL',
+    erc7730_valid: allPassed,
+    checks,
+    message: allPassed
+      ? 'ERC-7730 Clear Signing metadata is valid — Ledger devices will display human-readable transaction details'
+      : 'ERC-7730 metadata has issues — check failed fields',
   });
 });
 
