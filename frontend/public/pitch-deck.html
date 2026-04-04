@@ -999,69 +999,66 @@ if (window.location.search.includes('print=true')) {
     </div>
   </div>
 
-  <!-- SLIDE 9: Competition -->
+  <!-- SLIDE 9: V2 Roadmap -->
   <div class="slide" data-slide="9">
     <div class="slide-content">
-      <h2>Competition</h2>
-      <p style="color:var(--text-dim);font-size:15px;margin-bottom:8px;">DeadSwitch is the only solution combining all six technologies.</p>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <table class="comp-table">
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>Sarcophagus</th>
-              <th>Casa</th>
-              <th style="color:var(--gold);">DeadSwitch</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Decentralized</td>
-              <td style="color:var(--green);">Yes</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--green);font-weight:700;">Yes &#10003;</td>
-            </tr>
-            <tr>
-              <td>Own Token Required</td>
-              <td style="color:var(--amber);">Yes (SARCO)</td>
-              <td style="color:var(--text-dim);">No</td>
-              <td style="color:var(--green);font-weight:700;">No &#10003;</td>
-            </tr>
-            <tr>
-              <td>Price</td>
-              <td style="color:var(--text-dim);">Token-based</td>
-              <td style="color:var(--red);">$250/yr</td>
-              <td style="color:var(--green);font-weight:700;">Free / $9.99</td>
-            </tr>
-            <tr>
-              <td>World ID</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--green);font-weight:700;">Yes &#10003;</td>
-            </tr>
-            <tr>
-              <td>Chainlink Automation</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--green);font-weight:700;">Yes &#10003;</td>
-            </tr>
-            <tr>
-              <td>Hardware Wallet</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--green);font-weight:700;">Yes (Ledger) &#10003;</td>
-            </tr>
-            <tr>
-              <td>ENS Support</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--red);">No</td>
-              <td style="color:var(--green);font-weight:700;">Yes &#10003;</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:16px;text-align:center;font-size:13px;color:var(--text-dim);">
-        <span style="color:var(--gold);font-weight:700;">DeadSwitch</span> — 6 sponsor integrations. No token. No centralized custody. No $250 fees.
+      <h2>V2 <span class="gradient-text">Roadmap</span></h2>
+      <p style="color:var(--text-dim);font-size:14px;margin-bottom:16px;">From hackathon to production - what comes next.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:900px;width:100%;">
+        <!-- Percentage-based inheritance -->
+        <div class="card" style="padding:16px;border-left:3px solid var(--gold);">
+          <div style="font-size:14px;font-weight:700;color:var(--gold);margin-bottom:6px;">Percentage-Based Inheritance</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+            No more locking funds. Owner approves the contract as spender.<br>
+            <strong style="color:var(--text);">Uses wallet freely</strong> - heirs inherit a % of whatever balance exists at death.<br>
+            <span style="font-style:italic;color:var(--gold);">Like a real will - "50% to wife, 30% to son, 20% to charity"</span>
+          </div>
+        </div>
+        <!-- Multi-heir -->
+        <div class="card" style="padding:16px;border-left:3px solid var(--blue);">
+          <div style="font-size:14px;font-weight:700;color:var(--blue);margin-bottom:6px;">Multi-Heir with Splits</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+            Multiple beneficiaries with custom percentages.<br>
+            <strong style="color:var(--text);">wife.eth: 50% | son.eth: 30% | redcross.eth: 20%</strong><br>
+            Each heir claims independently.
+          </div>
+        </div>
+        <!-- Fallback chain -->
+        <div class="card" style="padding:16px;border-left:3px solid var(--green);">
+          <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px;">Fallback Beneficiaries</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+            If primary heir doesn't claim in 180 days, fallback heir activates.<br>
+            <strong style="color:var(--text);">If nobody claims in 1 year, funds go to charity.</strong><br>
+            Your crypto does good even after everyone is gone.
+          </div>
+        </div>
+        <!-- Guardian + Pause -->
+        <div class="card" style="padding:16px;border-left:3px solid var(--amber);">
+          <div style="font-size:14px;font-weight:700;color:var(--amber);margin-bottom:6px;">Guardian + Coma Protection</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+            Trusted contact can <strong style="color:var(--text);">pause recovery</strong> if owner is alive but incapacitated.<br>
+            Owner can <strong style="color:var(--text);">resume from recovery</strong> anytime.<br>
+            30-day cancel window before funds move.
+          </div>
+        </div>
+        <!-- ZKP -->
+        <div class="card" style="padding:16px;border-left:3px solid #a855f7;">
+          <div style="font-size:14px;font-weight:700;color:#a855f7;margin-bottom:6px;">ZK Activity Proofs</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+            Prove you're alive <strong style="color:var(--text);">without revealing your private key</strong>.<br>
+            Zero-knowledge proof submitted on-chain as heartbeat.<br>
+            Maximum privacy for the vault owner.
+          </div>
+        </div>
+        <!-- Yield -->
+        <div class="card" style="padding:16px;border-left:3px solid var(--green);">
+          <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px;">Yield-Bearing Vaults</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+            Locked ETH earns yield via Aave/Compound while waiting.<br>
+            <strong style="color:var(--text);">Your inheritance grows over time.</strong><br>
+            Interest accrues to the vault, inherited by the heir.
+          </div>
+        </div>
       </div>
     </div>
   </div>
