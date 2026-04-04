@@ -12,6 +12,27 @@
 
 ---
 
+## For Judges — Quick Links
+
+| Resource | Link |
+|----------|------|
+| 🌐 **Live app** | https://deadswitch.online |
+| 🎬 **Pitch video** | https://deadswitch.online (embedded on landing page) |
+| ⛓ **Deployed contract** | [`0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7`](https://sepolia.etherscan.io/address/0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7) (Sepolia) |
+| 🔗 **Chainlink upkeep** | [automation.chain.link/sepolia/87279356...](https://automation.chain.link/sepolia/87279356538326214029017935707370766485868215829937943885304798493436723241100) (2.1 LINK funded) |
+| 🎛 **Ledger PR** | [LedgerHQ/clear-signing-erc7730-registry#2511](https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/2511) |
+| 🏷 **ENS test** | [`/api/ens/resolve/vitalik.eth`](https://deadswitch.online/api/ens/resolve/vitalik.eth) |
+| 📋 **Submissions file** | [SUBMISSIONS.md](./SUBMISSIONS.md) |
+
+**Try the demo in 60 seconds**:
+1. Go to https://deadswitch.online/create
+2. Connect MetaMask (Sepolia testnet)
+3. Type `vitalik.eth` as beneficiary — watch live ENS resolution
+4. Deploy your vault (real on-chain transaction)
+5. Go to `/dashboard` — use demo controls to Send Heartbeat / Simulate Death / Claim
+
+---
+
 ## The Problem
 
 $140 billion in crypto is permanently lost. Owners died, lost keys, or became incapacitated without sharing access. Your family has no way to recover your funds.
@@ -75,16 +96,20 @@ Chainlink Automation (checks every 30 days)
 
 ---
 
-## Sponsor Integrations (All 6 Real)
+## Sponsor Integrations
 
-| Sponsor | Role | API Endpoint | Status |
-|---------|------|-------------|--------|
-| **Chainlink** | Dead man's switch timer — checkUpkeep/performUpkeep | `/api/chainlink/status` | ✅ Contract deployed |
-| **World ID** | Anti-bot heir verification — real IDKit widget | `/api/auth/verify-worldid` | ✅ Staging app live |
-| **Ledger** | ERC-7730 Clear Signing for all vault functions | `/api/ledger/manifest` | ✅ PR [#2511](https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/2511) submitted |
-| **0G** | Encrypted key shard storage with fallback | `/api/zerog/status` | ✅ SDK integrated |
-| **ENS** | "hugo.eth → wife.eth" human-readable inheritance | `/api/ens/resolve/:name` | ✅ Real resolution |
-| **Flare** | TEE attestation for key reconstruction | `/api/flare/tee-info` | ✅ Hash chain verified |
+**Applying for 3 prize tracks** (all with real, verified implementations):
+
+| Sponsor | Track | Evidence | Prize |
+|---------|-------|----------|-------|
+| **Chainlink** | "Connect the World" — Automation triggers state change on-chain | Contract implements `checkUpkeep`/`performUpkeep` ([Sol L92-105](./contracts/contracts/InheritanceVault.sol)) · [Live upkeep](https://automation.chain.link/sepolia/87279356538326214029017935707370766485868215829937943885304798493436723241100) funded with 2.1 LINK | $4K |
+| **ENS** | "Best Use of ENS" — Heirs named by ENS, live resolution | [`/api/ens/resolve/:name`](https://deadswitch.online/api/ens/resolve/vitalik.eth) · `ownerENS`/`beneficiaryENS` stored on-chain | $3K |
+| **Ledger** | "ERC-7730 Clear Signing" — Manifest for all vault functions | [PR #2511](https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/2511) submitted · [Live manifest](https://deadswitch.online/erc7730-manifest.json) | $4K |
+
+**Secondary integrations** (in the codebase, not primary submissions):
+- **World ID** — Heir verification via `@worldcoin/idkit`
+- **0G** — Shamir shard storage via `@0glabs/0g-ts-sdk`
+- **Flare** — TEE attestation cryptography for key recovery
 
 ---
 
