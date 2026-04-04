@@ -612,35 +612,42 @@ if (window.location.search.includes('print=true')) {
   <div class="slide" data-slide="5">
     <div class="slide-content vision-center">
       <h2>Tech Stack &amp; <span class="gradient-text">Sponsors</span></h2>
-      <div class="sponsors-grid" style="max-width:900px;margin:24px auto 0;">
+      <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">Applying for 3 sponsor tracks &mdash; all with real, verifiable implementations.</p>
+      <div class="sponsors-grid" style="max-width:900px;margin:20px auto 0;">
         <div class="card" style="text-align:center;padding:20px;border-left:3px solid var(--blue);">
           <div style="font-size:15px;font-weight:700;color:var(--blue);font-family:'JetBrains Mono',monospace;">Chainlink</div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Automation &mdash; checks heartbeat on-chain</div>
-        </div>
-        <div class="card" style="text-align:center;padding:20px;border-left:3px solid var(--green);">
-          <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;">World ID</div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Anti-bot heir verification</div>
-        </div>
-        <div class="card" style="text-align:center;padding:20px;border-left:3px solid var(--text);">
-          <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;">Ledger</div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Clear Signing (EIP-712)</div>
-        </div>
-        <div class="card" style="text-align:center;padding:20px;border-left:3px solid #a855f7;">
-          <div style="font-size:15px;font-weight:700;color:#a855f7;font-family:'JetBrains Mono',monospace;">0G Storage</div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Encrypted key shards</div>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Automation &mdash; checkUpkeep/performUpkeep on-chain</div>
+          <div style="font-size:11px;color:var(--green);margin-top:6px;font-family:'JetBrains Mono',monospace;">Live: 2.1 LINK</div>
         </div>
         <div class="card" style="text-align:center;padding:20px;border-left:3px solid var(--blue);">
           <div style="font-size:15px;font-weight:700;color:var(--blue);font-family:'JetBrains Mono',monospace;">ENS</div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">"hugo.eth &#8594; wife.eth"</div>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Live resolution &mdash; name your heir by ENS</div>
+          <div style="font-size:11px;color:var(--green);margin-top:6px;font-family:'JetBrains Mono',monospace;">/api/ens/resolve</div>
         </div>
-        <div class="card" style="text-align:center;padding:20px;border-left:3px solid var(--gold);">
-          <div style="font-size:15px;font-weight:700;color:var(--gold);font-family:'JetBrains Mono',monospace;">Flare TEE</div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">Tamper-proof reconstruction</div>
+        <div class="card" style="text-align:center;padding:20px;border-left:3px solid var(--text);">
+          <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;">Ledger</div>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:8px;">ERC-7730 Clear Signing &mdash; 9 functions</div>
+          <div style="font-size:11px;color:var(--green);margin-top:6px;font-family:'JetBrains Mono',monospace;">PR #2511</div>
         </div>
       </div>
-      <div class="card" style="margin-top:20px;max-width:900px;margin-left:auto;margin-right:auto;text-align:center;padding:16px 28px;">
-        <p style="font-size:14px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">
-          Solidity (35 tests) &bull; Next.js &bull; Shamir &bull; 6 Languages &bull; ZK-ready (V2)
+      <p style="font-size:11px;color:var(--text-dim);margin-top:16px;text-align:center;">Additional integrations (in codebase, not primary submissions):</p>
+      <div class="sponsors-grid" style="max-width:900px;margin:8px auto 0;opacity:0.55;">
+        <div class="card" style="text-align:center;padding:14px;border-left:2px solid var(--green);">
+          <div style="font-size:13px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;">World ID</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Sybil-resistant heir verification</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px;border-left:2px solid #a855f7;">
+          <div style="font-size:13px;font-weight:700;color:#a855f7;font-family:'JetBrains Mono',monospace;">0G Storage</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Encrypted key shards</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px;border-left:2px solid var(--gold);">
+          <div style="font-size:13px;font-weight:700;color:var(--gold);font-family:'JetBrains Mono',monospace;">Flare TEE</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Tamper-proof reconstruction</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;max-width:900px;margin-left:auto;margin-right:auto;text-align:center;padding:14px 28px;">
+        <p style="font-size:13px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">
+          Solidity 0.8.20 (35 tests) &bull; Next.js 16 &bull; wagmi v3 &bull; Sepolia &bull; 6 Languages
         </p>
       </div>
     </div>
