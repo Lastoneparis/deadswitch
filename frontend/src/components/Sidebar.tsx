@@ -49,7 +49,7 @@ export default function Sidebar() {
               <Shield className="text-primary" size={22} />
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight">DeadSwitch</h1>
+              <div className="flex items-center gap-2"><img src="/logo-icon.png" alt="DeadSwitch" className="w-8 h-8 rounded-lg" /><h1 className="font-bold text-lg leading-tight">DeadSwitch</h1></div>
               <p className="text-xs text-subtle">{t('nav.subtitle')}</p>
             </div>
           </Link>

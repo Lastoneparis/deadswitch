@@ -26,7 +26,7 @@ export default function WorldIdVerify({ onVerified }: WorldIdVerifyProps) {
 
     // Send proof to backend for server-side verification
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
       const res = await fetch(`${apiBase}/auth/verify-worldid`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

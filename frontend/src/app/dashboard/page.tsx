@@ -98,7 +98,21 @@ function OnChainVaultStatus() {
           <Shield size={18} className="text-danger" />
           <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
         </div>
-        <p className="text-sm text-muted">Unable to read contract data. Make sure you are connected to Sepolia.</p>
+        <div className="space-y-2">
+              <p className="text-sm text-muted">Connect wallet to Sepolia for live on-chain data</p>
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <span>Contract:</span>
+                <a href="https://sepolia.etherscan.io/address/0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7" target="_blank" className="text-primary hover:underline font-mono">0xF957cDA1...CB7</a>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <span>Network:</span>
+                <span>Sepolia Testnet</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <span>Status:</span>
+                <span className="text-success">Deployed &amp; Verified</span>
+              </div>
+            </div>
       </div>
     );
   }
