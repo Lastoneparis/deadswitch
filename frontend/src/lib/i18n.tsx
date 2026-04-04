@@ -876,6 +876,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<LangCode>('en');
 
   useEffect(() => {
+    // URL parameter override (for screenshots, testing, linking)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlLang = urlParams.get('lang');
+    if (urlLang && urlLang in translations) {
+      setLangState(urlLang as LangCode);
+      return;
+    }
     const stored = localStorage.getItem('deadswitch-lang');
     if (stored && stored in translations) {
       setLangState(stored as LangCode);
