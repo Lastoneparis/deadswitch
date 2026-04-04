@@ -69,12 +69,16 @@ export default function WalletConnect() {
     );
   }
 
-  // Not connected — try MetaMask first, fallback to injected
-  const primaryConnector = connectors.find(c => c.name === 'MetaMask') || connectors[0];
-
+  // Not connected — use injected connector (auto-detects MetaMask, Brave, etc.)
   return (
     <button
-      onClick={() => connect({ connector: primaryConnector })}
+      onClick={() => {
+        if (connectors[0]) {
+          connect({ connector: connectors[0] });
+        } else {
+          alert('No wallet detected. Please install MetaMask.');
+        }
+      }}
       disabled={isPending}
       className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-black text-sm font-semibold transition-colors disabled:opacity-50"
     >
