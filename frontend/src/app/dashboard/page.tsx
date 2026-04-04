@@ -3,22 +3,21 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Heart, Clock, Coins, User, Shield, Siren,
-  Play, FastForward, UserCheck, Zap, ExternalLink, CheckCircle, AlertTriangle, Loader2
+  Heart, Shield, Siren, Play, FastForward, UserCheck, Zap, ExternalLink,
+  CheckCircle, AlertTriangle, Loader2, Lock, Code2, Link2, Fingerprint,
+  ChevronDown, ChevronUp, RotateCcw, Cpu, Eye, Wallet, PlusCircle, ArrowRight
 } from 'lucide-react';
+import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { formatEther, encodeAbiParameters, parseAbiParameters } from 'viem';
-import { VAULT_ADDRESS, VAULT_ABI } from '@/lib/contract';
-import VaultStatusBadge from '@/components/VaultStatusBadge';
+import { formatEther } from 'viem';
+import { VAULT_ADDRESS, VAULT_ABI, CHAINLINK_ETH_USD_SEPOLIA, CHAINLINK_PRICE_FEED_ABI } from '@/lib/contract';
 import HeartbeatButton from '@/components/HeartbeatButton';
-import CountdownTimer from '@/components/CountdownTimer';
-import TimelineEvent from '@/components/TimelineEvent';
 import WorldIdVerify from '@/components/WorldIdVerify';
 import Confetti from '@/components/Confetti';
-import { sendHeartbeat, simulateDeath, claimInheritance } from '@/lib/api';
+import { getUserVaults, sendHeartbeat, simulateDeath, claimInheritance, demoReset, VaultData } from '@/lib/api';
 
-type Status = 'ACTIVE' | 'WARNING' | 'RECOVERY' | 'CLAIMED';
+type Status = 'active' | 'recovery' | 'claimed' | 'cancelled';
 
 interface TimelineItem {
   type: 'heartbeat' | 'warning' | 'recovery' | 'claimed' | 'created';
@@ -26,21 +25,20 @@ interface TimelineItem {
   description?: string;
 }
 
-const DEMO_VAULT = '0x7a3b...4f2e';
-const DEMO_OWNER = '0x1234...5678';
-
 const SEPOLIA_ETHERSCAN = 'https://sepolia.etherscan.io';
 
+/* ──────────────────────────────────────────────
+   TX Notification
+   ────────────────────────────────────────────── */
 function TxNotification({ hash, label }: { hash: string; label: string }) {
   const { data: receipt, isLoading } = useWaitForTransactionReceipt({ hash: hash as `0x${string}` });
-
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-success/30 rounded-xl p-4 space-y-2"
+      className="bg-card border border-success/20 rounded-2xl p-4 flex items-center justify-between"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {isLoading ? (
           <Loader2 size={16} className="text-primary animate-spin" />
         ) : receipt?.status === 'success' ? (
@@ -52,243 +50,272 @@ function TxNotification({ hash, label }: { hash: string; label: string }) {
           {label} {isLoading ? 'pending...' : receipt?.status === 'success' ? 'confirmed' : 'submitted'}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted font-mono">
-          Hash: {hash.slice(0, 10)}...{hash.slice(-8)}
-        </span>
-        <a
-          href={`${SEPOLIA_ETHERSCAN}/tx/${hash}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
-        >
-          View on Sepolia Etherscan <ExternalLink size={10} />
-        </a>
-      </div>
+      <a
+        href={`${SEPOLIA_ETHERSCAN}/tx/${hash}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-primary hover:underline flex items-center gap-1"
+      >
+        Etherscan <ExternalLink size={10} />
+      </a>
     </motion.div>
   );
 }
 
-function OnChainVaultStatus() {
-  const { data, isLoading, isError, refetch } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: VAULT_ABI,
-    functionName: 'getVaultInfo',
-  });
+/* ──────────────────────────────────────────────
+   Recovery Timeline
+   ────────────────────────────────────────────── */
+function RecoveryTimeline({ daysLeft, totalDays, t }: { daysLeft: number; totalDays: number; t: (k: string) => string }) {
+  const daysElapsed = totalDays - daysLeft;
+  const progress = Math.min(1, Math.max(0, daysElapsed / totalDays));
 
-  if (isLoading) {
-    return (
-      <div className="bg-card border border-primary/30 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield size={18} className="text-primary" />
-          <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
-        </div>
-        <div className="flex items-center gap-2 text-muted">
-          <Loader2 size={14} className="animate-spin" />
-          <span className="text-sm">Reading from contract...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="bg-card border border-danger/30 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield size={18} className="text-danger" />
-          <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
-        </div>
-        <div className="space-y-2">
-              <p className="text-sm text-muted">Connect wallet to Sepolia for live on-chain data</p>
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <span>Contract:</span>
-                <a href="https://sepolia.etherscan.io/address/0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7" target="_blank" className="text-primary hover:underline font-mono">0xF957cDA1...CB7</a>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <span>Network:</span>
-                <span>Sepolia Testnet</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <span>Status:</span>
-                <span className="text-success">Deployed &amp; Verified</span>
-              </div>
-            </div>
-      </div>
-    );
-  }
-
-  const [owner, beneficiary, balance, lastHeartbeat, heartbeatInterval, statusCode, timeRemaining, ownerENS, beneficiaryENS] = data;
-  const statusLabels = ['Inactive', 'Active', 'Recovery', 'Claimed', 'Cancelled'];
-  const statusColors = ['text-muted', 'text-success', 'text-danger', 'text-gold', 'text-subtle'];
-  const statusIndex = Number(statusCode);
-  const lastHbDate = Number(lastHeartbeat) > 0
-    ? new Date(Number(lastHeartbeat) * 1000).toLocaleString()
-    : 'Never';
-  const balanceEth = formatEther(balance);
-  const timeRemainingHours = Math.floor(Number(timeRemaining) / 3600);
-  const timeRemainingDays = Math.floor(timeRemainingHours / 24);
+  const milestones = [
+    { day: 0, label: t('dash.alive'), icon: Heart, color: 'text-success', bg: 'bg-success' },
+    { day: Math.round(totalDays * 0.33), label: t('dash.reminder'), icon: Eye, color: 'text-primary', bg: 'bg-primary' },
+    { day: Math.round(totalDays * 0.67), label: t('dash.warning'), icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning' },
+    { day: totalDays, label: t('dash.recovery'), icon: Siren, color: 'text-danger', bg: 'bg-danger' },
+  ];
 
   return (
-    <div className="bg-card border border-primary/30 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Shield size={18} className="text-primary" />
-          <h3 className="text-lg font-bold">On-Chain Vault Status (Sepolia)</h3>
-        </div>
-        <a
-          href={`${SEPOLIA_ETHERSCAN}/address/${VAULT_ADDRESS}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
-        >
-          View on Etherscan <ExternalLink size={10} />
-        </a>
+    <div className="relative mt-2">
+      <div className="h-1.5 bg-border rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${
+            progress > 0.67 ? 'bg-danger' : progress > 0.33 ? 'bg-warning' : 'bg-success'
+          }`}
+          initial={{ width: 0 }}
+          animate={{ width: `${progress * 100}%` }}
+          transition={{ duration: 1, ease: 'easeOut' }}
+        />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <div className="space-y-3">
-          <div>
-            <span className="text-subtle">Contract</span>
-            <p className="font-mono text-xs">{VAULT_ADDRESS.slice(0, 10)}...{VAULT_ADDRESS.slice(-8)}</p>
-          </div>
-          <div>
-            <span className="text-subtle">Owner</span>
-            <p className="font-mono text-xs">{ownerENS || `${String(owner).slice(0, 10)}...${String(owner).slice(-6)}`}</p>
-          </div>
-          <div>
-            <span className="text-subtle">Beneficiary</span>
-            <p className="font-mono text-xs">{beneficiaryENS || `${String(beneficiary).slice(0, 10)}...${String(beneficiary).slice(-6)}`}</p>
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <span className="text-subtle">Balance</span>
-            <p className="font-bold">{balanceEth} ETH</p>
-          </div>
-          <div>
-            <span className="text-subtle">Last Heartbeat</span>
-            <p className="font-medium">{lastHbDate}</p>
-          </div>
-          <div>
-            <span className="text-subtle">Status</span>
-            <p className={`font-bold ${statusColors[statusIndex] || 'text-muted'}`}>
-              {statusLabels[statusIndex] || `Unknown (${statusIndex})`}
-            </p>
-          </div>
-          {Number(timeRemaining) > 0 && (
-            <div>
-              <span className="text-subtle">Time Remaining</span>
-              <p className="font-medium">{timeRemainingDays}d {timeRemainingHours % 24}h</p>
+      <div className="flex justify-between mt-4">
+        {milestones.map((m, i) => {
+          const Icon = m.icon;
+          const reached = daysElapsed >= m.day;
+          return (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-500 ${
+                reached ? `${m.bg}/20 ring-2 ring-offset-2 ring-offset-background ring-current ${m.color}` : 'bg-border/50 text-subtle'
+              }`}>
+                <Icon size={16} />
+              </div>
+              <span className={`text-[11px] font-medium ${reached ? m.color : 'text-subtle'}`}>{m.label}</span>
+              <span className="text-[10px] text-subtle">{t('dash.day')} {m.day}</span>
             </div>
-          )}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
+/* ──────────────────────────────────────────────
+   Trust Signals
+   ────────────────────────────────────────────── */
+function TrustSignals({ t }: { t: (k: string) => string }) {
+  const signals = [
+    { icon: Lock, label: t('trust.non_custodial'), desc: t('trust.non_custodial_desc') },
+    { icon: Code2, label: t('trust.open_source'), desc: t('trust.open_source_desc') },
+    { icon: Link2, label: t('trust.on_chain'), desc: t('trust.on_chain_desc') },
+    { icon: Cpu, label: t('trust.chainlink'), desc: t('trust.chainlink_desc') },
+    { icon: Fingerprint, label: t('trust.worldid'), desc: t('trust.worldid_desc') },
+    { icon: Shield, label: t('trust.ledger'), desc: t('trust.ledger_desc') },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {signals.map((s, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05 }}
+          className="flex items-start gap-3 p-4 rounded-2xl bg-card border border-border hover:border-primary/20 transition-colors"
+        >
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <s.icon size={16} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-tight">{s.label}</p>
+            <p className="text-[11px] text-subtle mt-0.5">{s.desc}</p>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   No Vault State
+   ────────────────────────────────────────────── */
+function NoVaultState({ t }: { t: (k: string) => string }) {
+  return (
+    <div className="text-center py-16 space-y-6">
+      <div className="w-24 h-24 rounded-full bg-card border-2 border-border flex items-center justify-center mx-auto">
+        <Shield size={40} className="text-subtle" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold">{t('dash.no_vault')}</h2>
+        <p className="text-muted mt-2 max-w-md mx-auto">
+          {t('dash.no_vault_desc')}
+        </p>
+      </div>
+      <Link
+        href="/create"
+        className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-lg transition-all hover:shadow-lg hover:shadow-primary/25"
+      >
+        <PlusCircle size={20} />
+        {t('dash.create_vault')}
+        <ArrowRight size={18} />
+      </Link>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Main Dashboard
+   ────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { t } = useI18n();
   const { address, isConnected } = useAccount();
-  const [status, setStatus] = useState<Status>('ACTIVE');
-  const [lastHeartbeat, setLastHeartbeat] = useState('15 days ago');
-  const [daysLeft, setDaysLeft] = useState(75);
-  const [balance, setBalance] = useState('3.2');
+  const [vault, setVault] = useState<VaultData | null>(null);
+  const [allVaults, setAllVaults] = useState<VaultData[]>([]);
+  const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [worldIdVerified, setWorldIdVerified] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [txHashes, setTxHashes] = useState<{ hash: string; label: string }[]>([]);
   const [onChainMessage, setOnChainMessage] = useState('');
   const [mounted, setMounted] = useState(false);
-  const [timeline, setTimeline] = useState<TimelineItem[]>([
-    { type: 'heartbeat', date: 'March 19, 2026 — 14:22 UTC', description: 'Heartbeat confirmed on-chain' },
-    { type: 'heartbeat', date: 'February 17, 2026 — 09:15 UTC', description: 'Heartbeat confirmed on-chain' },
-    { type: 'heartbeat', date: 'January 18, 2026 — 11:03 UTC', description: 'Heartbeat confirmed on-chain' },
-    { type: 'created', date: 'December 15, 2025 — 16:45 UTC', description: 'Vault created with 3.2 ETH deposit' },
-  ]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: 'success' | 'warning' | 'danger' } | null>(null);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
 
   useEffect(() => { setMounted(true); }, []);
 
   const { writeContractAsync } = useWriteContract();
 
-  const targetDate = new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000);
+  // Chainlink ETH/USD price feed (Sepolia)
+  const { data: priceData } = useReadContract({
+    address: CHAINLINK_ETH_USD_SEPOLIA,
+    abi: CHAINLINK_PRICE_FEED_ABI,
+    functionName: 'latestRoundData',
+  });
+  const ethPrice = priceData ? Number((priceData as any)[1]) / 1e8 : null;
+
+  // Fetch user's vaults when wallet connects
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setVault(null);
+      setAllVaults([]);
+      setTimeline([]);
+      return;
+    }
+
+    setLoading(true);
+    getUserVaults(address)
+      .then(({ vaults }) => {
+        setAllVaults(vaults);
+        if (vaults.length > 0) {
+          const primary = vaults[0]; // Most recent vault
+          setVault(primary);
+          // Build timeline from heartbeat history
+          const tl: TimelineItem[] = [];
+          if (primary.recent_heartbeats) {
+            for (const hb of primary.recent_heartbeats) {
+              tl.push({
+                type: 'heartbeat',
+                date: new Date(hb.timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                description: hb.tx_hash ? `On-chain (tx: ${hb.tx_hash.slice(0, 10)}...)` : 'Heartbeat confirmed',
+              });
+            }
+          }
+          tl.push({
+            type: 'created',
+            date: new Date(primary.created_at * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            description: `Vault created with ${primary.balance} ETH deposit`,
+          });
+          setTimeline(tl);
+        }
+      })
+      .catch(() => {
+        // Backend unavailable — show empty state
+        setVault(null);
+        setAllVaults([]);
+      })
+      .finally(() => setLoading(false));
+  }, [isConnected, address]);
 
   const addTx = useCallback((hash: string, label: string) => {
     setTxHashes(prev => [{ hash, label }, ...prev]);
   }, []);
 
+  const showFeedback = useCallback((text: string, type: 'success' | 'warning' | 'danger') => {
+    setFeedbackMessage({ text, type });
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  }, []);
+
+  // Refresh vault data from backend
+  const refreshVault = useCallback(async () => {
+    if (!address) return;
+    try {
+      const { vaults } = await getUserVaults(address);
+      if (vaults.length > 0) {
+        setVault(vaults[0]);
+        setAllVaults(vaults);
+      }
+    } catch { /* ignore */ }
+  }, [address]);
+
   const handleHeartbeat = useCallback(async () => {
+    if (!vault) return;
+
     const now = new Date().toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',
     }) + ' — ' + new Date().toLocaleTimeString('en-US', {
       hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
     });
 
-    // Try on-chain heartbeat if wallet is connected
-    if (isConnected && address) {
+    let txHash: string | undefined;
+
+    // Try on-chain heartbeat
+    if (isConnected && address && vault.vault_address) {
       try {
         const hash = await writeContractAsync({
-          address: VAULT_ADDRESS,
+          address: vault.vault_address as `0x${string}`,
           abi: VAULT_ABI,
           functionName: 'heartbeat',
         });
         addTx(hash, 'Heartbeat');
-        setTimeline((prev) => [
-          { type: 'heartbeat', date: now, description: `Heartbeat confirmed on-chain (tx: ${hash.slice(0, 10)}...)` },
-          ...prev,
-        ]);
+        txHash = hash;
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        // If user rejected or contract reverted, still update UI with demo data
         console.warn('On-chain heartbeat failed:', errMsg);
-        setOnChainMessage(`On-chain heartbeat failed: ${errMsg.slice(0, 100)}`);
-        // Fall back to backend API
-        try { await sendHeartbeat(DEMO_VAULT, DEMO_OWNER); } catch { /* demo fallback */ }
-        setTimeline((prev) => [
-          { type: 'heartbeat', date: now, description: 'Heartbeat confirmed (demo fallback)' },
-          ...prev,
-        ]);
       }
-    } else {
-      // No wallet — use backend API
-      try { await sendHeartbeat(DEMO_VAULT, DEMO_OWNER); } catch { /* demo */ }
-      setTimeline((prev) => [
-        { type: 'heartbeat', date: now, description: 'Heartbeat confirmed on-chain' },
-        ...prev,
-      ]);
     }
 
-    setStatus('ACTIVE');
-    setLastHeartbeat('Just now');
-    setDaysLeft(90);
+    // Send to backend
+    try {
+      await sendHeartbeat(vault.id, txHash);
+    } catch { /* demo */ }
+
+    setTimeline((prev) => [
+      { type: 'heartbeat', date: now, description: txHash ? `On-chain (tx: ${txHash.slice(0, 10)}...)` : 'Heartbeat confirmed' },
+      ...prev,
+    ]);
+
+    showFeedback(t('dash.alive_confirmed'), 'success');
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 100);
-  }, [isConnected, address, writeContractAsync, addTx]);
+    await refreshVault();
+  }, [vault, isConnected, address, writeContractAsync, addTx, showFeedback, refreshVault]);
 
   const handleSimulateDeath = useCallback(async () => {
-    // Always call the backend API (fast-forward demo)
-    try { await simulateDeath(DEMO_VAULT); } catch { /* demo */ }
+    if (!vault) return;
 
-    // Also try on-chain performUpkeep (will likely revert — 30-day interval)
-    if (isConnected && address) {
-      try {
-        const hash = await writeContractAsync({
-          address: VAULT_ADDRESS,
-          abi: VAULT_ABI,
-          functionName: 'performUpkeep',
-          args: ['0x' as `0x${string}`],
-        });
-        addTx(hash, 'PerformUpkeep');
-        setOnChainMessage('');
-      } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        console.warn('performUpkeep reverted (expected):', errMsg);
-        setOnChainMessage('On-chain: heartbeat not yet expired (30-day interval). Using demo fast-forward.');
-      }
-    }
+    try { await simulateDeath(vault.id); } catch { /* demo */ }
 
-    setStatus('RECOVERY');
-    setLastHeartbeat('93 days ago');
-    setDaysLeft(0);
+    showFeedback(t('dash.recovery_activated'), 'danger');
     setTimeline((prev) => [
       {
         type: 'recovery',
@@ -302,16 +329,18 @@ export default function DashboardPage() {
       },
       ...prev,
     ]);
-  }, [isConnected, address, writeContractAsync, addTx]);
+    await refreshVault();
+  }, [vault, showFeedback, refreshVault]);
 
   const handleClaim = useCallback(async () => {
-    // Try on-chain claim if wallet is connected
-    if (isConnected && address) {
+    if (!vault || !address) return;
+
+    // Try on-chain claim
+    if (isConnected && vault.vault_address) {
       try {
-        // Use a demo World ID nullifier hash
         const nullifierHash = '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`;
         const hash = await writeContractAsync({
-          address: VAULT_ADDRESS,
+          address: vault.vault_address as `0x${string}`,
           abi: VAULT_ABI,
           functionName: 'claim',
           args: [nullifierHash],
@@ -320,270 +349,493 @@ export default function DashboardPage() {
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.warn('On-chain claim failed:', errMsg);
-        setOnChainMessage(`On-chain claim failed: ${errMsg.slice(0, 100)}`);
-        // Fall back to backend
-        try { await claimInheritance(DEMO_VAULT, 'wife.eth'); } catch { /* demo */ }
       }
-    } else {
-      try { await claimInheritance(DEMO_VAULT, 'wife.eth'); } catch { /* demo */ }
     }
 
+    // Backend claim
+    try { await claimInheritance(vault.id, address); } catch { /* demo */ }
+
     setClaimSuccess(true);
-    setStatus('CLAIMED');
-    setBalance('0.0');
     setShowConfetti(true);
+    showFeedback(`Inheritance of ${vault.balance} ETH transferred`, 'success');
     setTimeout(() => setShowConfetti(false), 100);
     setTimeline((prev) => [
       {
         type: 'claimed',
         date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        description: 'Inheritance of 3.2 ETH transferred to wife.eth',
+        description: `Inheritance of ${vault.balance} ETH transferred to ${vault.beneficiary_ens || vault.beneficiary_address.slice(0, 10)}...`,
       },
       ...prev,
     ]);
-  }, [isConnected, address, writeContractAsync, addTx]);
+    await refreshVault();
+  }, [vault, isConnected, address, writeContractAsync, addTx, showFeedback, refreshVault]);
 
-  const handleReset = useCallback(() => {
-    setStatus('ACTIVE');
-    setLastHeartbeat('15 days ago');
-    setDaysLeft(75);
-    setBalance('3.2');
+  const handleReset = useCallback(async () => {
+    // Reset backend vault to active state
+    if (vault) {
+      try { await demoReset(vault.id); } catch { /* demo */ }
+    }
+    setClaimSuccess(false);
     setShowConfetti(false);
     setWorldIdVerified(false);
-    setClaimSuccess(false);
     setTxHashes([]);
     setOnChainMessage('');
-    setTimeline([
-      { type: 'heartbeat', date: 'March 19, 2026 — 14:22 UTC', description: 'Heartbeat confirmed on-chain' },
-      { type: 'heartbeat', date: 'February 17, 2026 — 09:15 UTC', description: 'Heartbeat confirmed on-chain' },
-      { type: 'heartbeat', date: 'January 18, 2026 — 11:03 UTC', description: 'Heartbeat confirmed on-chain' },
-      { type: 'created', date: 'December 15, 2025 — 16:45 UTC', description: 'Vault created with 3.2 ETH deposit' },
-    ]);
-  }, []);
+    setFeedbackMessage(null);
+    setTimeline([]);
+    // Re-fetch fresh data (now active again)
+    await refreshVault();
+    showFeedback(t('dash.demo_heartbeat_sent'), 'success');
+  }, [vault, refreshVault, showFeedback, t]);
 
+  // Derived state from vault data
+  const status: Status = vault?.status || 'active';
+  const balance = vault ? String(vault.balance) : '0';
+  const beneficiary = vault?.beneficiary_ens || (vault?.beneficiary_address ? `${vault.beneficiary_address.slice(0, 8)}...${vault.beneficiary_address.slice(-6)}` : '—');
+  const heartbeatIntervalDays = vault ? Math.round(vault.heartbeat_interval / 86400) : 90;
+  const timeUntilRecovery = vault?.time_until_recovery ?? (vault ? vault.heartbeat_interval - (Math.floor(Date.now() / 1000) - vault.last_heartbeat) : 0);
+  const daysLeft = Math.max(0, Math.round(timeUntilRecovery / 86400));
+  const lastHeartbeatDate = vault ? new Date(vault.last_heartbeat * 1000) : null;
+  const lastHeartbeatLabel = lastHeartbeatDate
+    ? (Date.now() - lastHeartbeatDate.getTime() < 60000 ? t('dash.just_now') : `${Math.round((Date.now() - lastHeartbeatDate.getTime()) / 86400000)} ${t('dash.days_ago')}`)
+    : '—';
+
+  const statusMap = {
+    active: { label: 'ACTIVE', textColor: 'text-success', iconBg: 'bg-success/15', glow: 'bg-success', Icon: Shield },
+    recovery: { label: 'RECOVERY', textColor: 'text-danger', iconBg: 'bg-danger/15', glow: 'bg-danger', Icon: Siren },
+    claimed: { label: 'CLAIMED', textColor: 'text-gold', iconBg: 'bg-gold/15', glow: 'bg-gold', Icon: CheckCircle },
+    cancelled: { label: 'CANCELLED', textColor: 'text-subtle', iconBg: 'bg-subtle/15', glow: 'bg-subtle', Icon: Shield },
+  } as const;
+  const st = statusMap[status];
+  const StatusIcon = st.Icon;
+
+  // ═══════════════════════════════
+  //  NOT CONNECTED
+  // ═══════════════════════════════
+  if (!isConnected) {
+    return (
+      <div className="space-y-8 max-w-3xl mx-auto">
+        <div className="text-center py-16 space-y-6">
+          <div className="w-24 h-24 rounded-full bg-card border-2 border-border flex items-center justify-center mx-auto">
+            <Wallet size={40} className="text-subtle" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">{t('dash.connect_wallet')}</h2>
+            <p className="text-muted mt-2 max-w-md mx-auto">
+              {t('dash.connect_wallet_desc')}
+            </p>
+          </div>
+        </div>
+
+        {/* Demo controls still work for judges */}
+        <DemoControls />
+
+        <div>
+          <h3 className="text-xs text-subtle uppercase tracking-wider mb-4">{t('dash.trust_title')}</h3>
+          <TrustSignals t={t} />
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════
+  //  LOADING
+  // ═══════════════════════════════
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 size={32} className="text-primary animate-spin" />
+        <p className="text-muted">{t('dash.loading')}</p>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════
+  //  NO VAULT — show create prompt
+  // ═══════════════════════════════
+  if (!vault) {
+    return (
+      <div className="space-y-8 max-w-3xl mx-auto">
+        <NoVaultState t={t} />
+        <div>
+          <h3 className="text-xs text-subtle uppercase tracking-wider mb-4">{t('dash.trust_title')}</h3>
+          <TrustSignals t={t} />
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════
+  //  VAULT EXISTS — full dashboard
+  // ═══════════════════════════════
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <Confetti active={showConfetti} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('dash.title')}</h1>
-          <p className="text-muted mt-1">{t('dash.subtitle')}</p>
-        </div>
-        <VaultStatusBadge status={status} />
-      </div>
+      {/* Feedback Toast */}
+      <AnimatePresence>
+        {feedbackMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-3 ${
+              feedbackMessage.type === 'success'
+                ? 'bg-success/10 border-success/30 text-success'
+                : feedbackMessage.type === 'warning'
+                ? 'bg-warning/10 border-warning/30 text-warning'
+                : 'bg-danger/10 border-danger/30 text-danger'
+            }`}
+          >
+            {feedbackMessage.type === 'success' ? <CheckCircle size={18} /> : feedbackMessage.type === 'warning' ? <AlertTriangle size={18} /> : <Siren size={18} />}
+            <span className="font-semibold text-sm">{feedbackMessage.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Tx Notifications */}
+      {/* TX Notifications */}
       <AnimatePresence>
         {txHashes.map((tx) => (
           <TxNotification key={tx.hash} hash={tx.hash} label={tx.label} />
         ))}
       </AnimatePresence>
 
-      {/* On-chain message */}
       {onChainMessage && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-warning/30 rounded-xl p-4 flex items-start gap-3"
+          className="bg-card border border-warning/20 rounded-2xl p-4 flex items-start gap-3"
         >
           <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
           <p className="text-sm text-muted">{onChainMessage}</p>
         </motion.div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-          <div className="flex items-center gap-2 text-subtle text-sm">
-            <Heart size={14} className="text-success" />
-            {t('dash.last_heartbeat')}
-          </div>
-          <p className={`text-lg font-bold ${status === 'RECOVERY' ? 'text-danger' : ''}`}>
-            {lastHeartbeat}
-          </p>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-          <CountdownTimer targetDate={targetDate} totalDays={90} />
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-          <div className="flex items-center gap-2 text-subtle text-sm">
-            <Coins size={14} className="text-warning" />
-            {t('dash.balance')}
-          </div>
-          <p className="text-lg font-bold">{balance} ETH</p>
-          <p className="text-xs text-subtle">${(parseFloat(balance) * 3000).toLocaleString()}</p>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-          <div className="flex items-center gap-2 text-subtle text-sm">
-            <User size={14} className="text-gold" />
-            {t('dash.beneficiary')}
-          </div>
-          <p className="text-lg font-bold font-mono">wife.eth</p>
-          <p className="text-xs text-success">{t('dash.worldid_verified')}</p>
-        </div>
-      </div>
-
-      {/* On-Chain Vault Status */}
-      {mounted && <OnChainVaultStatus />}
-
-      {/* Center: Heartbeat Button + Recovery Alert */}
-      <div className="flex flex-col items-center py-8">
-        <AnimatePresence mode="wait">
-          {status === 'CLAIMED' && claimSuccess ? (
-            <motion.div
-              key="claimed"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center space-y-4"
+      {/* Vault selector (if multiple vaults) */}
+      {allVaults.length > 1 && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-subtle">Vault:</span>
+          {allVaults.map((v, i) => (
+            <button
+              key={v.id}
+              onClick={() => setVault(v)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                v.id === vault.id ? 'bg-primary/15 text-primary' : 'bg-card border border-border text-muted hover:text-foreground'
+              }`}
             >
-              <div className="w-32 h-32 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center mx-auto">
-                <Shield className="text-gold" size={56} />
-              </div>
-              <h2 className="text-2xl font-bold text-gold">{t('dash.inheritance_transferred')}</h2>
-              <p className="text-muted">3.2 ETH {t('dash.transferred_to')} wife.eth</p>
-            </motion.div>
-          ) : status === 'RECOVERY' ? (
-            <motion.div
-              key="recovery"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center space-y-6"
-            >
+              Vault {i + 1} ({v.balance} ETH)
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ══ HERO STATUS CARD ══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`relative overflow-hidden rounded-3xl border-2 p-8 md:p-10 transition-all duration-700 ${
+          status === 'active'
+            ? 'border-success/30 bg-gradient-to-br from-success/5 via-card to-card'
+            : status === 'recovery'
+            ? 'border-danger/30 bg-gradient-to-br from-danger/8 via-card to-card'
+            : status === 'claimed'
+            ? 'border-gold/30 bg-gradient-to-br from-gold/5 via-card to-card'
+            : 'border-border bg-card'
+        }`}
+      >
+        <div className={`absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl opacity-20 ${st.glow}`} />
+
+        <div className="relative z-10">
+          {/* Status badge */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
               <motion.div
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ repeat: Infinity, duration: 1 }}
-                className="w-32 h-32 rounded-full bg-danger/15 border-2 border-danger/50 flex items-center justify-center mx-auto pulse-red"
+                key={status}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center ${st.iconBg}`}
               >
-                <Siren className="text-danger" size={56} />
+                <StatusIcon size={24} className={st.textColor} />
               </motion.div>
               <div>
-                <h2 className="text-2xl font-bold text-danger">{t('dash.recovery_active')}</h2>
-                <p className="text-muted mt-2">
-                  {t('dash.recovery_desc')}
-                  <br />
-                  {t('dash.chainlink_triggered')}
-                </p>
+                <motion.p key={st.label} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                  className={`text-2xl font-bold tracking-wide ${st.textColor}`}>{st.label}</motion.p>
+                <p className="text-sm text-subtle">{t('dash.vault_status')}</p>
               </div>
+            </div>
+            {status === 'active' && <div className="w-3 h-3 rounded-full bg-success animate-pulse" />}
+            {status === 'recovery' && (
+              <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 0.8 }}
+                className="w-3 h-3 rounded-full bg-danger" />
+            )}
+          </div>
 
+          {/* Key metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="min-w-0">
+              <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.next_checkin')}</p>
+              <p className={`text-2xl font-bold tabular-nums ${
+                daysLeft <= 7 ? 'text-danger' : daysLeft <= 30 ? 'text-warning' : 'text-foreground'
+              }`}>
+                {daysLeft > 0 ? `${daysLeft} ${t('dash.days')}` : t('dash.expired')}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.protected_assets')}</p>
+              <p className="text-2xl font-bold">{balance} ETH</p>
+              {ethPrice ? (
+                <p className="text-xs text-subtle flex items-center gap-1">
+                  ${(parseFloat(balance) * ethPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  <span className="text-[10px] text-primary/60">{t('dash.via_chainlink')}</span>
+                </p>
+              ) : (
+                <p className="text-xs text-subtle">${(parseFloat(balance) * 3000).toLocaleString()}</p>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.beneficiary')}</p>
+              <p className="text-lg font-bold font-mono truncate">{beneficiary}</p>
+              {vault.world_id_nullifier && (
+                <p className="text-xs text-success flex items-center gap-1 mt-0.5">
+                  <Fingerprint size={10} /> {t('dash.worldid_verified')}
+                </p>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-subtle uppercase tracking-wider mb-1">{t('dash.last_heartbeat')}</p>
+              <p className={`text-lg font-semibold ${status === 'recovery' ? 'text-danger' : ''}`}>
+                {lastHeartbeatLabel}
+              </p>
+            </div>
+          </div>
+
+          {/* Recovery Timeline */}
+          <div className="mt-8 pt-6 border-t border-border/50">
+            <p className="text-xs text-subtle uppercase tracking-wider mb-3">{t('dash.recovery_timeline')}</p>
+            <RecoveryTimeline daysLeft={daysLeft} totalDays={heartbeatIntervalDays} t={t} />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ══ PRIMARY ACTION ══ */}
+      <div className="flex flex-col items-center py-4">
+        <AnimatePresence mode="wait">
+          {(status === 'claimed' || claimSuccess) ? (
+            <motion.div key="claimed" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center space-y-5">
+              <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                className="w-36 h-36 rounded-full bg-gold/10 border-2 border-gold/30 flex items-center justify-center mx-auto">
+                <Shield className="text-gold" size={64} />
+              </motion.div>
+              <h2 className="text-3xl font-bold text-gold">{t('dash.inheritance_transferred')}</h2>
+              <p className="text-muted text-lg">{balance} ETH {t('dash.securely_transferred')} {beneficiary}</p>
+            </motion.div>
+          ) : status === 'recovery' ? (
+            <motion.div key="recovery" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              className="text-center space-y-6 w-full max-w-md">
+              <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ repeat: Infinity, duration: 1 }}
+                className="w-36 h-36 rounded-full bg-danger/10 border-2 border-danger/40 flex items-center justify-center mx-auto pulse-red">
+                <Siren className="text-danger" size={64} />
+              </motion.div>
+              <div>
+                <h2 className="text-3xl font-bold text-danger">{t('dash.recovery_mode_active')}</h2>
+                <p className="text-muted mt-2">{t('dash.recovery_mode_desc')}</p>
+              </div>
               {!worldIdVerified ? (
                 <div className="max-w-sm mx-auto">
                   <WorldIdVerify onVerified={() => setWorldIdVerified(true)} />
                 </div>
               ) : (
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleClaim}
-                  className="px-8 py-4 rounded-2xl bg-gold hover:bg-gold/90 text-black font-bold text-lg transition-colors cursor-pointer"
-                >
+                <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleClaim}
+                  className="px-10 py-5 rounded-2xl bg-gradient-to-r from-gold to-amber-500 text-black font-bold text-lg shadow-lg shadow-gold/20 transition-all cursor-pointer">
                   {t('claim.btn')}
                 </motion.button>
               )}
             </motion.div>
           ) : (
             <motion.div key="heartbeat">
-              <HeartbeatButton
-                onPress={handleHeartbeat}
-                warning={status === 'WARNING'}
-              />
+              <HeartbeatButton onPress={handleHeartbeat} warning={daysLeft <= 7} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Wallet Connection Status for judges */}
-      {mounted && (
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-sm">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-subtle'}`} />
-          {isConnected ? (
-            <span className="text-muted">
-              Wallet connected: <span className="font-mono text-foreground">{address?.slice(0, 6)}...{address?.slice(-4)}</span> — on-chain actions will send real Sepolia transactions
-            </span>
-          ) : (
-            <span className="text-muted">
-              Wallet not connected — using demo mode. Connect wallet for real Sepolia transactions.
-            </span>
+      {/* ══ DEMO CONTROLS ══ */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+        className="rounded-3xl border-2 border-dashed border-primary/20 bg-card/50 p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Zap size={16} className="text-primary" />
+          <h3 className="text-sm font-bold text-primary uppercase tracking-wider">{t('dash.live_demo')}</h3>
+          <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">{t('dash.for_judges')}</span>
+        </div>
+        <p className="text-xs text-subtle mb-5">{t('dash.demo_desc')}</p>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={handleHeartbeat}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-semibold hover:bg-success/20 transition-all cursor-pointer">
+            <Play size={14} /> {t('dash.send_heartbeat')}
+          </button>
+          <button onClick={handleSimulateDeath}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm font-semibold hover:bg-danger/20 transition-all cursor-pointer group">
+            <FastForward size={14} className="group-hover:animate-pulse" /> {t('dash.simulate_death')}
+          </button>
+          <button onClick={() => {
+            if (status !== 'recovery') {
+              handleSimulateDeath().then(() => { setTimeout(() => { setWorldIdVerified(true); setTimeout(() => handleClaim(), 500); }, 500); });
+            } else if (!worldIdVerified) { setWorldIdVerified(true); setTimeout(() => handleClaim(), 500); } else { handleClaim(); }
+          }}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-sm font-semibold hover:bg-gold/20 transition-all cursor-pointer">
+            <UserCheck size={14} /> {t('dash.claim_as_heir')}
+          </button>
+          <button onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-subtle text-sm font-medium hover:text-foreground transition-all cursor-pointer">
+            <RotateCcw size={14} /> {t('dash.reset')}
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ══ TRUST SIGNALS ══ */}
+      <div>
+        <h3 className="text-xs text-subtle uppercase tracking-wider mb-4">{t('dash.trust_title')}</h3>
+        <TrustSignals t={t} />
+      </div>
+
+      {/* ══ ADVANCED ══ */}
+      <div className="border border-border rounded-2xl overflow-hidden">
+        <button onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full flex items-center justify-between px-6 py-4 text-sm text-subtle hover:text-foreground transition-colors cursor-pointer">
+          <span className="font-medium">{t('dash.advanced')}</span>
+          {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+        <AnimatePresence>
+          {showAdvanced && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+              <div className="px-6 pb-6 space-y-6">
+                {/* Vault details */}
+                <div className="space-y-3">
+                  <p className="text-xs text-subtle uppercase tracking-wider">{t('dash.vault_details')}</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-subtle text-xs">{t('dash.vault_id')}</span>
+                      <p className="font-mono text-xs mt-0.5">{vault.id.slice(0, 8)}...</p>
+                    </div>
+                    <div>
+                      <span className="text-subtle text-xs">{t('dash.owner')}</span>
+                      <p className="font-mono text-xs mt-0.5">{vault.owner_address.slice(0, 10)}...{vault.owner_address.slice(-6)}</p>
+                    </div>
+                    <div>
+                      <span className="text-subtle text-xs">{t('dash.beneficiary')}</span>
+                      <p className="font-mono text-xs mt-0.5">{vault.beneficiary_address.slice(0, 10)}...{vault.beneficiary_address.slice(-6)}</p>
+                    </div>
+                    <div>
+                      <span className="text-subtle text-xs">{t('dash.interval')}</span>
+                      <p className="font-medium mt-0.5">{t('dash.every_days').replace('{n}', String(heartbeatIntervalDays))}</p>
+                    </div>
+                    {vault.vault_address && (
+                      <div className="col-span-2">
+                        <span className="text-subtle text-xs">Contract</span>
+                        <p className="font-mono text-xs mt-0.5">{vault.vault_address}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Wallet */}
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-2 h-2 rounded-full bg-success" />
+                  <span className="text-muted">
+                    {t('dash.connected')}: <span className="font-mono text-foreground">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+                  </span>
+                </div>
+
+                {/* Activity Timeline */}
+                {timeline.length > 0 && (
+                  <div>
+                    <p className="text-xs text-subtle uppercase tracking-wider mb-3">{t('dash.activity_log')}</p>
+                    <div className="space-y-2">
+                      {timeline.map((event, i) => {
+                        const config = {
+                          heartbeat: { icon: Heart, color: 'text-success', bg: 'bg-success/10', label: t('timeline.heartbeat') },
+                          warning: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10', label: t('timeline.warning') },
+                          recovery: { icon: Siren, color: 'text-danger', bg: 'bg-danger/10', label: t('timeline.recovery') },
+                          claimed: { icon: CheckCircle, color: 'text-gold', bg: 'bg-gold/10', label: t('timeline.claimed') },
+                          created: { icon: Shield, color: 'text-primary', bg: 'bg-primary/10', label: t('timeline.created') },
+                        }[event.type];
+                        const Icon = config.icon;
+                        return (
+                          <motion.div key={`${event.type}-${event.date}-${i}`}
+                            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                            className="flex items-center gap-3 py-2">
+                            <div className={`w-7 h-7 rounded-lg ${config.bg} flex items-center justify-center shrink-0`}>
+                              <Icon size={14} className={config.color} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{config.label}</p>
+                              {event.description && <p className="text-xs text-muted truncate">{event.description}</p>}
+                            </div>
+                            <span className="text-[11px] text-subtle shrink-0">{event.date}</span>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Standalone Demo Controls (for disconnected state)
+   ────────────────────────────────────────────── */
+function DemoControls() {
+  const [demoStatus, setDemoStatus] = useState<'active' | 'recovery' | 'claimed'>('active');
+  const [demoBalance, setDemoBalance] = useState('3.2');
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  const showMsg = (msg: string) => { setFeedbackMsg(msg); setTimeout(() => setFeedbackMsg(null), 2500); };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+      className="rounded-3xl border-2 border-dashed border-primary/20 bg-card/50 p-6">
+      <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl bg-warning/10 border border-warning/20">
+        <AlertTriangle size={14} className="text-warning shrink-0" />
+        <p className="text-xs text-warning font-medium">Demo Mode — no wallet connected. Simulated actions only.</p>
+      </div>
+
+      {feedbackMsg && (
+        <div className="my-3 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-medium text-center">
+          {feedbackMsg}
         </div>
       )}
 
-      {/* Timeline */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-          <Clock size={18} className="text-primary" />
-          {t('dash.timeline')}
-        </h3>
-        <div className="space-y-1">
-          {timeline.map((event, i) => (
-            <TimelineEvent
-              key={`${event.type}-${event.date}-${i}`}
-              type={event.type}
-              date={event.date}
-              description={event.description}
-              index={i}
-            />
-          ))}
-        </div>
+      <div className="flex items-center gap-2 mt-4 mb-2">
+        <Zap size={16} className="text-primary" />
+        <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Live Demo</h3>
+        <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">For Judges</span>
       </div>
-
-      {/* Demo Controls */}
-      <div className="bg-card border-2 border-dashed border-primary/30 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap size={18} className="text-primary" />
-          <h3 className="text-lg font-bold">{t('demo.title')}</h3>
-          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">{t('demo.for_judges')}</span>
-        </div>
-        <p className="text-sm text-muted mb-6">
-          {t('demo.desc')}
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <button
-            onClick={handleHeartbeat}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-success/15 border border-success/30 text-success font-medium hover:bg-success/25 transition-colors cursor-pointer"
-          >
-            <Play size={16} />
-            {t('demo.send_heartbeat')}
-          </button>
-          <button
-            onClick={handleSimulateDeath}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-danger/15 border border-danger/30 text-danger font-medium hover:bg-danger/25 transition-colors cursor-pointer"
-          >
-            <FastForward size={16} />
-            {t('demo.simulate_death')}
-          </button>
-          <button
-            onClick={() => {
-              if (status !== 'RECOVERY') {
-                handleSimulateDeath().then(() => {
-                  setTimeout(() => {
-                    setWorldIdVerified(true);
-                    setTimeout(() => handleClaim(), 500);
-                  }, 500);
-                });
-              } else if (!worldIdVerified) {
-                setWorldIdVerified(true);
-                setTimeout(() => handleClaim(), 500);
-              } else {
-                handleClaim();
-              }
-            }}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold/15 border border-gold/30 text-gold font-medium hover:bg-gold/25 transition-colors cursor-pointer"
-          >
-            <UserCheck size={16} />
-            {t('demo.claim_heir')}
-          </button>
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-card border border-border text-muted font-medium hover:text-foreground transition-colors cursor-pointer"
-          >
-            {t('demo.reset')}
-          </button>
-        </div>
+      <p className="text-xs text-subtle mb-3">Status: <span className={`font-bold ${demoStatus === 'active' ? 'text-success' : demoStatus === 'recovery' ? 'text-danger' : 'text-gold'}`}>{demoStatus.toUpperCase()}</span> | Balance: {demoBalance} ETH</p>
+      <div className="flex flex-wrap gap-3">
+        <button onClick={() => { setDemoStatus('active'); setDemoBalance('3.2'); showMsg('Heartbeat sent — vault is active'); }}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-semibold hover:bg-success/20 transition-all cursor-pointer">
+          <Play size={14} /> Send Heartbeat
+        </button>
+        <button onClick={() => { setDemoStatus('recovery'); showMsg('Death simulated — recovery mode active'); }}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm font-semibold hover:bg-danger/20 transition-all cursor-pointer">
+          <FastForward size={14} /> Simulate Death
+        </button>
+        <button onClick={() => { setDemoStatus('claimed'); setDemoBalance('0.0'); showMsg('Inheritance claimed — 3.2 ETH transferred'); }}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-sm font-semibold hover:bg-gold/20 transition-all cursor-pointer">
+          <UserCheck size={14} /> Claim as Heir
+        </button>
+        <button onClick={() => { setDemoStatus('active'); setDemoBalance('3.2'); setFeedbackMsg(null); }}
+          className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-subtle text-sm font-medium hover:text-foreground transition-all cursor-pointer">
+          <RotateCcw size={14} /> Reset
+        </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

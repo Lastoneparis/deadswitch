@@ -48,6 +48,27 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "DeadSwitch",
+              "url": "https://deadswitch.online",
+              "description": "Decentralized dead man's switch for crypto inheritance. Non-custodial. Chainlink-automated. World ID-verified.",
+              "applicationCategory": "FinanceApplication",
+              "operatingSystem": "Web",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              }
+            })
+          }}
+        />
+      </head>
       <body className="min-h-full flex">
         <Providers>
           <Sidebar />
@@ -58,7 +79,7 @@ export default function RootLayout({
                 <WalletConnect />
               </div>
             </header>
-            <main className="p-6 lg:p-10 max-w-6xl mx-auto">
+            <main className="p-6 lg:p-10 max-w-6xl mx-auto mesh-bg min-h-screen">
               {children}
             </main>
           </div>

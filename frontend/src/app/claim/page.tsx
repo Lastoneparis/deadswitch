@@ -1,63 +1,100 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Shield, Siren, CheckCircle, Coins, User, Clock, Loader2 } from 'lucide-react';
+import { Search, Shield, Siren, CheckCircle, Coins, User, Clock, Loader2, Wallet, AlertTriangle } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { useAccount } from 'wagmi';
 import WorldIdVerify from '@/components/WorldIdVerify';
-import VaultStatusBadge from '@/components/VaultStatusBadge';
 import Confetti from '@/components/Confetti';
-import { getVault, claimInheritance } from '@/lib/api';
-
-type VaultStatus = 'ACTIVE' | 'RECOVERY' | 'CLAIMED';
-
-interface VaultInfo {
-  address: string;
-  owner: string;
-  beneficiary: string;
-  balance: string;
-  status: VaultStatus;
-  lastHeartbeat: string;
-  interval: number;
-}
+import { getVault, getHeirVaults, claimInheritance, searchVaultsByAddress, resolveENS, VaultData } from '@/lib/api';
 
 export default function ClaimPage() {
   const { t } = useI18n();
+  const { address, isConnected } = useAccount();
   const [vaultInput, setVaultInput] = useState('');
   const [searching, setSearching] = useState(false);
-  const [vault, setVault] = useState<VaultInfo | null>(null);
+  const [searchError, setSearchError] = useState('');
+  const [vault, setVault] = useState<VaultData | null>(null);
+  const [heirVaults, setHeirVaults] = useState<VaultData[]>([]);
   const [worldIdVerified, setWorldIdVerified] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [loadingHeir, setLoadingHeir] = useState(false);
+
+  // Auto-fetch vaults where connected wallet is beneficiary
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setHeirVaults([]);
+      return;
+    }
+    setLoadingHeir(true);
+    getHeirVaults(address)
+      .then(({ vaults }) => {
+        setHeirVaults(vaults.filter(v => v.status === 'recovery'));
+        const recoveryVault = vaults.find(v => v.status === 'recovery');
+        if (recoveryVault) setVault(recoveryVault);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingHeir(false));
+  }, [isConnected, address]);
 
   const handleSearch = async () => {
+    if (!vaultInput.trim()) return;
     setSearching(true);
+    setSearchError('');
+    setVault(null);
+
     try {
-      const result = await getVault(vaultInput);
-      setVault(result);
+      // If it looks like a UUID, search by vault ID
+      if (vaultInput.includes('-') && vaultInput.length > 30) {
+        const result = await getVault(vaultInput.trim());
+        setVault(result);
+      }
+      // If it looks like an ENS name, resolve then search by owner
+      else if (vaultInput.endsWith('.eth')) {
+        const resolved = await resolveENS(vaultInput.trim());
+        if (resolved.resolved) {
+          const { vaults } = await searchVaultsByAddress(resolved.address);
+          if (vaults.length > 0) {
+            const recovery = vaults.find(v => v.status === 'recovery');
+            setVault(recovery || vaults[0]);
+          } else {
+            setSearchError(t('claim.no_vault_found') || 'No vault found for this address');
+          }
+        } else {
+          setSearchError(t('claim.ens_not_found') || 'ENS name could not be resolved');
+        }
+      }
+      // If it looks like an address (0x...), search by owner
+      else if (vaultInput.startsWith('0x')) {
+        const { vaults } = await searchVaultsByAddress(vaultInput.trim());
+        if (vaults.length > 0) {
+          const recovery = vaults.find(v => v.status === 'recovery');
+          setVault(recovery || vaults[0]);
+        } else {
+          setSearchError(t('claim.no_vault_found') || 'No vault found for this address');
+        }
+      }
+      // Otherwise try as vault ID
+      else {
+        const result = await getVault(vaultInput.trim());
+        setVault(result);
+      }
     } catch {
-      // Mock data for demo
-      setVault({
-        address: vaultInput || '0x7a3b...4f2e',
-        owner: '0x1234...5678',
-        beneficiary: 'wife.eth',
-        balance: '3.2',
-        status: 'RECOVERY',
-        lastHeartbeat: '93 days ago',
-        interval: 90,
-      });
+      setSearchError(t('claim.no_vault_found') || 'No vault found. Try an owner address, ENS name, or vault ID.');
     }
     setSearching(false);
   };
 
   const handleClaim = async () => {
-    if (!vault) return;
+    if (!vault || !isConnected || !address) return;
     setClaiming(true);
     try {
-      await claimInheritance(vault.address, vault.beneficiary);
+      await claimInheritance(vault.id, address);
     } catch {
-      // Mock for demo
+      // demo fallback
     }
     await new Promise((r) => setTimeout(r, 2000));
     setClaiming(false);
@@ -65,6 +102,10 @@ export default function ClaimPage() {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 100);
   };
+
+  const beneficiaryLabel = vault?.beneficiary_ens || (vault?.beneficiary_address ? `${vault.beneficiary_address.slice(0, 8)}...${vault.beneficiary_address.slice(-6)}` : '');
+  const ownerLabel = vault?.owner_ens || (vault?.owner_address ? `${vault.owner_address.slice(0, 8)}...${vault.owner_address.slice(-6)}` : '');
+  const lastHeartbeatLabel = vault ? `${Math.round((Date.now() / 1000 - vault.last_heartbeat) / 86400)} ${t('dash.days_ago')}` : '';
 
   return (
     <div className="max-w-lg mx-auto py-10 space-y-8">
@@ -75,35 +116,73 @@ export default function ClaimPage() {
         <p className="text-muted mt-2">{t('claim.subtitle')}</p>
       </div>
 
+      {/* Wallet requirement */}
+      {!isConnected && (
+        <div className="bg-warning/10 border border-warning/20 rounded-2xl p-5 flex items-start gap-3">
+          <Wallet size={20} className="text-warning mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-warning">{t('claim.wallet_required')}</p>
+            <p className="text-xs text-muted mt-1">{t('claim.wallet_required_desc')}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-detected heir vaults */}
+      {isConnected && loadingHeir && (
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Loader2 size={14} className="animate-spin" />
+          {t('claim.checking')}
+        </div>
+      )}
+
+      {isConnected && heirVaults.length > 0 && !vault && (
+        <div className="bg-danger/10 border border-danger/20 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Siren size={18} className="text-danger" />
+            <p className="font-semibold text-danger">{t('claim.claimable_found')}</p>
+          </div>
+          {heirVaults.map((v) => (
+            <button key={v.id} onClick={() => setVault(v)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-card border border-border hover:border-danger/30 transition-colors cursor-pointer">
+              <div className="text-left">
+                <p className="text-sm font-medium">{t('claim.from')}: {v.owner_ens || `${v.owner_address.slice(0, 8)}...`}</p>
+                <p className="text-xs text-muted">{t('claim.status_recovery')}</p>
+              </div>
+              <p className="text-lg font-bold">{v.balance} ETH</p>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Search */}
-      <div className="flex gap-3">
-        <input
-          type="text"
-          placeholder={t('claim.placeholder')}
-          value={vaultInput}
-          onChange={(e) => setVaultInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="flex-1 px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:outline-none text-sm font-mono"
-        />
-        <button
-          onClick={handleSearch}
-          disabled={searching}
-          className="px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-          {t('claim.search')}
-        </button>
+      <div className="space-y-2">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="0x... / vitalik.eth / vault ID"
+            value={vaultInput}
+            onChange={(e) => { setVaultInput(e.target.value); setSearchError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="flex-1 px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:outline-none text-sm font-mono"
+          />
+          <button onClick={handleSearch} disabled={searching}
+            className="px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors flex items-center gap-2 cursor-pointer">
+            {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+            {t('claim.search')}
+          </button>
+        </div>
+        {searchError && (
+          <div className="flex items-center gap-2 text-sm text-danger">
+            <AlertTriangle size={14} />
+            {searchError}
+          </div>
+        )}
       </div>
 
       <AnimatePresence mode="wait">
         {vault && !claimed && (
-          <motion.div
-            key="vault-info"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-6"
-          >
+          <motion.div key="vault-info" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }} className="space-y-6">
             {/* Vault Info Card */}
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -111,69 +190,64 @@ export default function ClaimPage() {
                   <Shield size={16} className="text-primary" />
                   {t('claim.vault_info')}
                 </h3>
-                <VaultStatusBadge status={vault.status} />
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                  vault.status === 'active' ? 'bg-success/15 text-success' :
+                  vault.status === 'recovery' ? 'bg-danger/15 text-danger' :
+                  'bg-gold/15 text-gold'
+                }`}>{vault.status}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <div>
-                  <p className="text-xs text-subtle flex items-center gap-1"><User size={10} /> Owner</p>
-                  <p className="text-sm font-mono mt-1">{vault.owner}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-subtle flex items-center gap-1"><User size={10} /> {t('dash.owner')}</p>
+                  <p className="text-sm font-mono mt-1 truncate">{ownerLabel}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-subtle flex items-center gap-1"><User size={10} /> {t('dash.beneficiary')}</p>
+                  <p className="text-sm font-mono mt-1 truncate">{beneficiaryLabel}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-subtle flex items-center gap-1"><User size={10} /> Beneficiary</p>
-                  <p className="text-sm font-mono mt-1">{vault.beneficiary}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-subtle flex items-center gap-1"><Coins size={10} /> Balance</p>
+                  <p className="text-xs text-subtle flex items-center gap-1"><Coins size={10} /> {t('dash.balance')}</p>
                   <p className="text-sm font-semibold mt-1">{vault.balance} ETH</p>
                 </div>
                 <div>
-                  <p className="text-xs text-subtle flex items-center gap-1"><Clock size={10} /> Last Heartbeat</p>
-                  <p className="text-sm mt-1">{vault.lastHeartbeat}</p>
+                  <p className="text-xs text-subtle flex items-center gap-1"><Clock size={10} /> {t('dash.last_heartbeat')}</p>
+                  <p className="text-sm mt-1">{lastHeartbeatLabel}</p>
                 </div>
               </div>
             </div>
 
-            {/* Status-specific content */}
-            {vault.status === 'ACTIVE' ? (
+            {/* Status actions */}
+            {vault.status === 'active' ? (
               <div className="bg-success/10 border border-success/20 rounded-2xl p-6 text-center">
                 <Shield className="text-success mx-auto mb-3" size={32} />
                 <h3 className="font-semibold text-success text-lg">{t('claim.active_msg')}</h3>
-                <p className="text-sm text-muted mt-2">
-                  {t('claim.active_desc')}
-                </p>
+                <p className="text-sm text-muted mt-2">{t('claim.active_desc')}</p>
               </div>
-            ) : vault.status === 'RECOVERY' ? (
+            ) : vault.status === 'recovery' ? (
               <div className="space-y-4">
                 <div className="bg-danger/10 border border-danger/20 rounded-2xl p-6 text-center">
                   <Siren className="text-danger mx-auto mb-3" size={32} />
                   <h3 className="font-semibold text-danger text-lg">{t('claim.recovery_msg')}</h3>
-                  <p className="text-sm text-muted mt-2">
-                    {t('claim.recovery_desc')} {vault.lastHeartbeat}. {t('claim.recovery_claim')}
-                  </p>
+                  <p className="text-sm text-muted mt-2">{t('claim.recovery_desc')} {lastHeartbeatLabel}. {t('claim.recovery_claim')}</p>
                 </div>
 
-                {!worldIdVerified ? (
+                {!isConnected ? (
+                  <div className="bg-card border border-warning/20 rounded-2xl p-6 text-center space-y-3">
+                    <Wallet size={28} className="text-warning mx-auto" />
+                    <p className="font-semibold text-sm">{t('claim.connect_to_claim')}</p>
+                    <p className="text-xs text-muted">{t('claim.connect_to_claim_desc')}</p>
+                  </div>
+                ) : !worldIdVerified ? (
                   <WorldIdVerify onVerified={() => setWorldIdVerified(true)} />
                 ) : (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleClaim}
-                    disabled={claiming}
-                    className="w-full py-4 rounded-2xl bg-gold hover:bg-gold/90 text-black font-bold text-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
-                  >
+                  <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleClaim} disabled={claiming}
+                    className="w-full py-4 rounded-2xl bg-gold hover:bg-gold/90 text-black font-bold text-lg transition-colors cursor-pointer flex items-center justify-center gap-2">
                     {claiming ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" />
-                        {t('claim.processing')}
-                      </>
+                      <><Loader2 size={20} className="animate-spin" /> {t('claim.processing')}</>
                     ) : (
-                      <>
-                        {t('claim.btn')} ({vault.balance} ETH)
-                      </>
+                      <>{t('claim.btn')} ({vault.balance} ETH)</>
                     )}
                   </motion.button>
                 )}
@@ -183,12 +257,8 @@ export default function ClaimPage() {
         )}
 
         {claimed && vault && (
-          <motion.div
-            key="claimed"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center space-y-6 py-10"
-          >
+          <motion.div key="claimed" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="text-center space-y-6 py-10">
             <div className="w-24 h-24 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center mx-auto">
               <CheckCircle className="text-gold" size={48} />
             </div>
@@ -196,10 +266,6 @@ export default function ClaimPage() {
             <p className="text-muted text-lg">
               <span className="text-foreground font-bold">{vault.balance} ETH</span> {t('claim.success_desc')}
             </p>
-            <div className="bg-card border border-border rounded-xl p-4 max-w-sm mx-auto">
-              <p className="text-xs text-subtle">{t('claim.tx_confirmed')}</p>
-              <p className="text-sm font-mono mt-1 text-success">Block #18,234,567</p>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

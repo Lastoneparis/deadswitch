@@ -2,12 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Shield, LayoutDashboard, PlusCircle, Key, BookOpen, Menu, X } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Key, BookOpen, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useI18n, LanguageSwitcher } from '@/lib/i18n';
 
+function LogoIcon({ size = 18, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+    </svg>
+  );
+}
+
 const navItems = [
-  { href: '/', labelKey: 'nav.home', icon: Shield },
+  { href: '/', labelKey: 'nav.home', icon: LogoIcon },
   { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { href: '/create', labelKey: 'nav.create', icon: PlusCircle },
   { href: '/claim', labelKey: 'nav.claim', icon: Key },
@@ -45,11 +53,9 @@ export default function Sidebar() {
       >
         <div className="p-6 border-b border-border">
           <Link href="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Shield className="text-primary" size={22} />
-            </div>
+            <img src="/logo-icon.png" alt="DeadSwitch" className="w-10 h-10 rounded-xl" />
             <div>
-              <div className="flex items-center gap-2"><img src="/logo-icon.png" alt="DeadSwitch" className="w-8 h-8 rounded-lg" /><h1 className="font-bold text-lg leading-tight">DeadSwitch</h1></div>
+              <h1 className="font-bold text-lg leading-tight">DeadSwitch</h1>
               <p className="text-xs text-subtle">{t('nav.subtitle')}</p>
             </div>
           </Link>

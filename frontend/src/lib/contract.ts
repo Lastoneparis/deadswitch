@@ -14,3 +14,11 @@ export const VAULT_ABI = parseAbi([
   'event RecoveryModeActivated(address indexed owner, address indexed beneficiary, uint256 timestamp)',
   'event InheritanceClaimed(address indexed beneficiary, uint256 amount, uint256 timestamp)',
 ]);
+
+// Chainlink ETH/USD Price Feed on Sepolia
+export const CHAINLINK_ETH_USD_SEPOLIA = '0x694AA1769357215DE4FAC081bf1f309aDC325306' as const;
+
+export const CHAINLINK_PRICE_FEED_ABI = parseAbi([
+  'function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
+  'function decimals() external view returns (uint8)',
+]);

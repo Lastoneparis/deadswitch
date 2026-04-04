@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { Wallet, User, Clock, Coins, CheckCircle, ArrowRight, ArrowLeft, Shield, Loader2 } from 'lucide-react';
-import { createVault } from '@/lib/api';
+import { createVault, resolveENS } from '@/lib/api';
 import Link from 'next/link';
 
 const intervals = [
@@ -37,14 +37,28 @@ export default function CreateVaultPage() {
   };
 
   const handleDeploy = async () => {
-    if (!address) return;
+    if (!address || !isConnected) return;
     setDeploying(true);
     try {
+      // Resolve ENS if needed
+      let beneficiaryAddr = beneficiary;
+      let beneficiaryEns: string | undefined;
+      if (beneficiary.endsWith('.eth')) {
+        try {
+          const resolved = await resolveENS(beneficiary);
+          if (resolved.resolved) {
+            beneficiaryAddr = resolved.address;
+            beneficiaryEns = beneficiary;
+          }
+        } catch { /* use raw input */ }
+      }
+
       const result = await createVault({
-        owner: address,
-        beneficiary,
-        heartbeatInterval: interval,
-        depositAmount: amount,
+        owner_address: address,
+        beneficiary_address: beneficiaryAddr,
+        heartbeat_interval: interval * 86400,
+        balance: parseFloat(amount),
+        beneficiary_ens: beneficiaryEns,
       });
       setVaultAddress(result.vaultAddress || '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
       setDeployed(true);
@@ -277,8 +291,8 @@ export default function CreateVaultPage() {
         ) : (
           <button
             onClick={handleDeploy}
-            disabled={deploying}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-success hover:bg-success/90 text-white font-bold text-sm disabled:opacity-60 transition-colors cursor-pointer"
+            disabled={deploying || !isConnected}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-success hover:bg-success/90 text-white font-bold text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             {deploying ? (
               <>
