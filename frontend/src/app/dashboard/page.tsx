@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther } from 'viem';
-import { VAULT_ADDRESS, VAULT_ABI, CHAINLINK_ETH_USD_SEPOLIA, CHAINLINK_PRICE_FEED_ABI } from '@/lib/contract';
+import { VAULT_DEPLOY_ABI, CHAINLINK_ETH_USD_SEPOLIA, CHAINLINK_PRICE_FEED_ABI } from '@/lib/contract';
 import HeartbeatButton from '@/components/HeartbeatButton';
 import WorldIdVerify from '@/components/WorldIdVerify';
 import Confetti from '@/components/Confetti';
@@ -320,7 +320,7 @@ export default function DashboardPage() {
       try {
         const hash = await writeContractAsync({
           address: vault.vault_address as `0x${string}`,
-          abi: VAULT_ABI,
+          abi: VAULT_DEPLOY_ABI,
           functionName: 'heartbeat',
         });
         addTx(hash, 'Heartbeat');
@@ -378,7 +378,7 @@ export default function DashboardPage() {
         const nullifierHash = '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`;
         const hash = await writeContractAsync({
           address: vault.vault_address as `0x${string}`,
-          abi: VAULT_ABI,
+          abi: VAULT_DEPLOY_ABI,
           functionName: 'claim',
           args: [nullifierHash],
         });
@@ -833,7 +833,7 @@ export default function DashboardPage() {
                               try {
                                 const hash = await writeContractAsync({
                                   address: vault.vault_address as `0x${string}`,
-                                  abi: VAULT_ABI,
+                                  abi: VAULT_DEPLOY_ABI,
                                   functionName: 'cancel',
                                 });
                                 addTx(hash, 'Cancel');

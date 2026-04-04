@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAccount } from 'wagmi';
+import { useAccount, useDeployContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther, keccak256, toBytes } from 'viem';
 import {
   Wallet, User, Clock, Coins, CheckCircle, ArrowRight, ArrowLeft, Shield,
   Loader2, AlertTriangle, ExternalLink, XCircle
 } from 'lucide-react';
+import { VAULT_DEPLOY_ABI, VAULT_BYTECODE } from '@/lib/contract';
 import { createVault, resolveENS } from '@/lib/api';
 import Link from 'next/link';
 
@@ -75,27 +77,54 @@ export default function CreateVaultPage() {
     }
   };
 
+  const [deployTxHash, setDeployTxHash] = useState<`0x${string}` | undefined>();
+  const { deployContractAsync } = useDeployContract();
+
   const handleDeploy = async () => {
     if (!address || !isConnected) return;
     setDeploying(true);
     try {
-      // Use resolved ENS address if available
       const beneficiaryAddr = ensResolved?.address || beneficiary;
       const beneficiaryEns = ensResolved?.name || (beneficiary.endsWith('.eth') ? beneficiary : undefined);
+      const heartbeatSecs = BigInt(interval * 86400);
+      const worldIdNullifier = keccak256(toBytes(`deadswitch-${address}-${beneficiaryAddr}`));
+      const depositWei = parseEther(amount);
 
-      const result = await createVault({
-        owner_address: address,
-        beneficiary_address: beneficiaryAddr,
-        heartbeat_interval: interval * 86400,
-        balance: parseFloat(amount),
-        beneficiary_ens: beneficiaryEns,
+      // Deploy real on-chain contract from user's wallet
+      const hash = await deployContractAsync({
+        abi: VAULT_DEPLOY_ABI,
+        bytecode: VAULT_BYTECODE,
+        args: [
+          beneficiaryAddr as `0x${string}`,
+          heartbeatSecs,
+          worldIdNullifier,
+          '', // ownerENS (resolved later)
+          beneficiaryEns || '',
+        ],
+        value: depositWei,
       });
-      setVaultAddress(result.vaultAddress || result.vault?.id || '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+
+      setDeployTxHash(hash);
+
+      // Register in backend database (with vault_address to be filled after confirmation)
+      try {
+        await createVault({
+          owner_address: address,
+          beneficiary_address: beneficiaryAddr,
+          heartbeat_interval: interval * 86400,
+          balance: parseFloat(amount),
+          beneficiary_ens: beneficiaryEns,
+        });
+      } catch { /* backend registration - non-blocking */ }
+
+      // Show the tx hash immediately, contract address comes after confirmation
+      setVaultAddress(hash);
       setDeployed(true);
-    } catch {
-      // Mock success for hackathon demo
-      setVaultAddress('0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
-      setDeployed(true);
+    } catch (err) {
+      console.error('Deploy failed:', err);
+      // If user rejected or gas issue, don't show success
+      setDeploying(false);
+      return;
     }
     setDeploying(false);
   };
@@ -116,9 +145,17 @@ export default function CreateVaultPage() {
         <p className="text-muted">
           Remember to check in every <span className="text-foreground font-semibold">{interval} days</span> to keep your vault active.
         </p>
-        <div className="bg-card border border-border rounded-2xl p-4">
-          <p className="text-xs text-subtle mb-1">Vault Address</p>
-          <p className="font-mono text-sm break-all">{vaultAddress}</p>
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
+          <p className="text-xs text-subtle mb-1">Deployment Transaction</p>
+          <p className="font-mono text-xs break-all text-muted">{vaultAddress}</p>
+          <a
+            href={`https://sepolia.etherscan.io/tx/${vaultAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            View on Sepolia Etherscan <ExternalLink size={10} />
+          </a>
         </div>
         <Link
           href="/dashboard"
