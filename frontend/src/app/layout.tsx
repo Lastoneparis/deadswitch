@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   title: "DeadSwitch — Your Crypto Shouldn't Die With You",
   description: "Decentralized dead man's switch for crypto inheritance. If you stop checking in, your family recovers your funds. Chainlink-automated. World ID-verified. On-chain.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/favicon-32x32.png",
   },
   openGraph: {
     title: "DeadSwitch — Your Crypto Shouldn't Die With You",
