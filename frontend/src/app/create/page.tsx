@@ -496,9 +496,18 @@ export default function CreateVaultPage() {
                   <p className="text-sm text-muted">Confirm your vault settings</p>
                 </div>
               </div>
+              {/* Wallet indicator - confirms which wallet will deploy */}
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-primary font-semibold">Deploying from this wallet</p>
+                  <p className="text-xs font-mono text-muted truncate">{address}</p>
+                </div>
+                <span className="text-[11px] text-subtle">{walletBalance.toFixed(4)} ETH</span>
+              </div>
               <div className="space-y-3">
                 <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-sm text-subtle">Owner</span>
+                  <span className="text-sm text-subtle">Owner (your wallet)</span>
                   <span className="text-sm font-mono">{address?.slice(0, 10)}...{address?.slice(-6)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-border">
