@@ -138,7 +138,7 @@ cd deadswitch
 ./scripts/demo.sh
 ```
 
-Dashboard: [localhost:3000](http://localhost:3000) | API: [localhost:3002](http://localhost:3002)
+Dashboard: [deadswitch.online](https://deadswitch.online) | API: [deadswitch.online/api](https://deadswitch.online/api/health)
 
 ---
 
