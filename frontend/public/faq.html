@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeadSwitch — FAQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#0a0b12;color:#e2e8f0;line-height:1.7;padding:40px 20px}
+.container{max-width:800px;margin:0 auto}
+h1{font-size:2.5rem;font-weight:800;text-align:center;margin-bottom:8px}
+h1 span{background:linear-gradient(135deg,#d4a76a,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:#94a3b8;font-size:1rem;margin-bottom:48px}
+.faq{margin-bottom:20px;background:#14161f;border:1px solid #1e2130;border-radius:12px;overflow:hidden}
+.faq-q{padding:20px 24px;cursor:pointer;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center;transition:background 0.2s}
+.faq-q:hover{background:#1a1c28}
+.faq-q .arrow{font-size:20px;color:#64748b;transition:transform 0.3s}
+.faq.open .arrow{transform:rotate(45deg);color:#d4a76a}
+.faq-a{max-height:0;overflow:hidden;transition:max-height 0.4s ease,padding 0.4s ease;padding:0 24px}
+.faq.open .faq-a{max-height:600px;padding:0 24px 20px}
+.faq-a p{color:#94a3b8;font-size:14px;line-height:1.8;margin-bottom:8px}
+.faq-a strong{color:#e2e8f0}
+.faq-a .highlight{color:#d4a76a;font-weight:600}
+.back{display:inline-block;margin-bottom:32px;color:#3b82f6;text-decoration:none;font-size:14px}
+.back:hover{text-decoration:underline}
+.cat{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a76a;margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid #1e2130}
+</style>
+</head>
+<body>
+<div class="container">
+<a href="/" class="back">&larr; Back to DeadSwitch</a>
+<h1><span>FAQ</span></h1>
+<p class="subtitle">Everything you need to know about DeadSwitch</p>
+
+<div class="cat">How It Works</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">What is DeadSwitch? <span class="arrow">+</span></div>
+<div class="faq-a"><p>DeadSwitch is a decentralized dead man's switch for crypto. You deposit crypto into a smart contract and designate an heir. You sign a "heartbeat" monthly to prove you're alive. If you stop checking in for 90 days, <strong>Chainlink Automation</strong> triggers recovery mode and your heir can claim the funds.</p></div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">How does the heartbeat work? <span class="arrow">+</span></div>
+<div class="faq-a"><p>Once a month (or whatever interval you set), you connect your wallet and click <strong>"I'm Still Here"</strong>. This sends a transaction to the smart contract that resets the timer. It takes 5 seconds. If you forget, you'll get alerts at 30, 60, 75, and 85 days.</p></div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">What happens when the owner dies? <span class="arrow">+</span></div>
+<div class="faq-a">
+<p>1. Owner stops sending heartbeats</p>
+<p>2. After 90 days, Chainlink Automation triggers <strong>Recovery Mode</strong></p>
+<p>3. A 30-day cancel window starts (in case the owner is just incapacitated, not dead)</p>
+<p>4. The heir connects their wallet, verifies with <strong>World ID</strong>, and claims the funds</p>
+<p>5. Funds are transferred directly from the smart contract to the heir's wallet</p>
+</div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">Can I still use my crypto while it's in the vault? <span class="arrow">+</span></div>
+<div class="faq-a"><p>In V1, funds deposited into the vault are locked. Think of it as a safe deposit box — you put in what you want your family to inherit, not your entire portfolio. Your daily spending wallet stays separate.</p>
+<p>In <span class="highlight">V2</span>, we're building <strong>percentage-based inheritance</strong> — you just approve the contract as a spender and use your wallet freely. Heirs inherit a % of whatever balance exists at death. Like a real will.</p></div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">Can I set multiple heirs? <span class="arrow">+</span></div>
+<div class="faq-a"><p>In V1: one vault, one heir. In <span class="highlight">V2</span>: multiple heirs with custom percentages — <strong>wife.eth: 50%, son.eth: 30%, redcross.eth: 20%</strong>. Each heir claims their share independently. If an heir doesn't claim within 180 days, their share goes to a fallback beneficiary or charity.</p></div>
+</div>
+
+<div class="cat">Security</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">What if someone tries to claim who isn't the heir? <span class="arrow">+</span></div>
+<div class="faq-a">
+<p>Three layers of protection:</p>
+<p><strong>1. Pre-approved address</strong> — Only the wallet address set at vault creation can claim. The smart contract rejects all others.</p>
+<p><strong>2. World ID</strong> — The claimer must verify they're a real human (anti-bot). Prevents automated attacks.</p>
+<p><strong>3. Optional secret phrase</strong> — A shared secret only the family knows (e.g., wedding date).</p>
+<p>An attacker would need the heir's private key + their phone (World ID) + the secret phrase. Practically impossible.</p>
+</div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">What if the owner is in a coma, not dead? <span class="arrow">+</span></div>
+<div class="faq-a">
+<p>Multiple safeguards:</p>
+<p>• <strong>90-day grace period</strong> — 3 months is a long time. Family, friends, or hospital staff will notice.</p>
+<p>• <strong>30-day cancel window</strong> — After recovery activates, the owner has 30 more days to cancel before funds move.</p>
+<p>• <strong>Guardian</strong> (V2) — A trusted contact can pause recovery: "He's alive, just in hospital."</p>
+<p>• <strong>Owner can resume</strong> — If the owner wakes up, they cancel recovery from any device, anytime.</p>
+</div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">What are Shamir key shards? <span class="arrow">+</span></div>
+<div class="faq-a"><p>Your private key is split into <strong>5 pieces (shards)</strong> using Shamir's Secret Sharing. You need <strong>any 3 of the 5</strong> to reconstruct the key. Each shard alone reveals <strong>zero information</strong> about the key — this is mathematically proven, not just hard to break. Shards are stored in different locations (0G storage, hardware backup, guardian) so an attacker would need to compromise 3 separate systems.</p></div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">What are ZK Activity Proofs? <span class="arrow">+</span></div>
+<div class="faq-a"><p>Currently, heartbeats are standard on-chain transactions — everyone can see which wallet sent them. With <span class="highlight">ZK Activity Proofs</span> (V2), the owner generates a zero-knowledge proof that says <strong>"I know the private key to this vault"</strong> without revealing which key, which wallet, or who they are. Maximum privacy — nobody can link the heartbeat to a specific person.</p></div>
+</div>
+
+<div class="cat">Technology</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">Which sponsors/technologies does DeadSwitch use? <span class="arrow">+</span></div>
+<div class="faq-a">
+<p><strong>Chainlink</strong> — Automation checks heartbeats every 30 days (decentralized, unstoppable)</p>
+<p><strong>World ID</strong> — Verifies the heir is a real human (anti-bot)</p>
+<p><strong>Ledger</strong> — Hardware wallet signing for heartbeats and claims (EIP-712 Clear Signing)</p>
+<p><strong>0G</strong> — Encrypted key shard storage (decentralized persistence)</p>
+<p><strong>ENS</strong> — Human-readable: "hugo.eth → wife.eth" instead of hex addresses</p>
+<p><strong>Flare</strong> — TEE attestation for tamper-proof key reconstruction</p>
+</div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">Is the smart contract audited? <span class="arrow">+</span></div>
+<div class="faq-a"><p>The contract has <strong>35 unit tests</strong> passing and uses OpenZeppelin's ReentrancyGuard. It's deployed on Sepolia testnet for live testing. For mainnet deployment, a formal audit by a reputable firm would be conducted first. The contract is intentionally simple — timer + transfer — to minimize attack surface.</p></div>
+</div>
+
+<div class="faq" onclick="this.classList.toggle('open')">
+<div class="faq-q">Does DeadSwitch hold my private keys? <span class="arrow">+</span></div>
+<div class="faq-a"><p><strong>No. Never.</strong> DeadSwitch is a smart contract — it holds funds, not keys. Your private key stays in your wallet (MetaMask, Ledger). The vault only stores the deposited ETH/tokens and releases them to the pre-approved heir when recovery conditions are met. No company, no server, no person ever has access to your keys.</p></div>
+</div>
+
+<div style="margin-top:48px;text-align:center;padding:24px;background:#14161f;border:1px solid #1e2130;border-radius:12px">
+<p style="font-size:14px;color:#94a3b8;">Still have questions?</p>
+<p style="margin-top:8px"><a href="/dashboard" style="color:#d4a76a;text-decoration:none;font-weight:600;">Try the demo →</a></p>
+</div>
+
+<div style="margin-top:32px;text-align:center;font-size:12px;color:#64748b">
+<p>DeadSwitch — ETHGlobal Cannes 2026</p>
+<p style="margin-top:4px"><a href="https://deadswitch.online" style="color:#3b82f6;text-decoration:none">deadswitch.online</a></p>
+</div>
+</div>
+</body>
+</html>
