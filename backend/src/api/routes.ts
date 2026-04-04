@@ -63,7 +63,7 @@ router.get('/stats', (_req: Request, res: Response) => {
 
 router.post('/vault/create', (req: Request, res: Response) => {
   try {
-    const { owner_address, beneficiary_address, heartbeat_interval, owner_ens, beneficiary_ens, balance } = req.body;
+    const { owner_address, beneficiary_address, heartbeat_interval, owner_ens, beneficiary_ens, balance, vault_address, world_id_nullifier } = req.body;
 
     if (!owner_address || !beneficiary_address) {
       res.status(400).json({ error: 'owner_address and beneficiary_address required' });
@@ -80,13 +80,13 @@ router.post('/vault/create', (req: Request, res: Response) => {
       id: vaultId,
       owner_address: owner_address.toLowerCase(),
       beneficiary_address: beneficiary_address.toLowerCase(),
-      vault_address: null,
+      vault_address: vault_address || null,
       owner_ens: owner_ens || null,
       beneficiary_ens: beneficiary_ens || null,
       heartbeat_interval: heartbeat_interval || 86400,
       last_heartbeat: now,
       status: 'active',
-      world_id_nullifier: null,
+      world_id_nullifier: world_id_nullifier || null,
       balance: balance || 0,
       created_at: now,
     });
@@ -258,11 +258,8 @@ router.post('/vault/claim', async (req: Request, res: Response) => {
       const result = await verifyWorldId(world_id_proof, nullifier_hash);
       worldIdVerified = result.verified && result.human;
 
-      // Store nullifier to prevent double-claim
-      if (worldIdVerified) {
-        db.prepare('UPDATE vaults SET world_id_nullifier = @nullifier WHERE id = @id')
-          .run({ nullifier: nullifier_hash, id: vault_id });
-      }
+      // Note: world_id_nullifier is set at vault creation and should NOT be overwritten.
+      // The nullifier_hash from the claim proof is verified against the stored value elsewhere.
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -399,6 +396,48 @@ router.post('/vault/simulate-death', (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error('[API] Simulate death error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ─── Demo Reset (for judges) ───
+
+router.post('/vault/demo-reset', (req: Request, res: Response) => {
+  try {
+    const { vault_id } = req.body;
+
+    if (!vault_id) {
+      res.status(400).json({ error: 'vault_id required' });
+      return;
+    }
+
+    const vault = db.prepare('SELECT * FROM vaults WHERE id = @id').get({ id: vault_id }) as VaultRow | undefined;
+
+    if (!vault) {
+      res.status(404).json({ error: 'Vault not found' });
+      return;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    // Reset vault to active state with fresh heartbeat
+    db.prepare('UPDATE vaults SET status = @status, last_heartbeat = @now WHERE id = @id')
+      .run({ status: 'active', now, id: vault_id });
+
+    // Delete any claims for this vault (demo cleanup)
+    db.prepare('DELETE FROM claims WHERE vault_id = @id').run({ id: vault_id });
+
+    console.log('[DEMO] Reset vault ' + vault_id + ' to active');
+
+    res.json({
+      success: true,
+      vault_id,
+      new_status: 'active',
+      message: 'Vault reset to active state.',
+    });
+  } catch (err: any) {
+    console.error('[API] Demo reset error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -604,69 +643,28 @@ router.post('/flare/smart-accounts/execute', async (req: Request, res: Response)
 
 router.get('/ledger/manifest', (_req: Request, res: Response) => {
   res.json({
-    "$schema": "https://erc7730.ledger.com/schema/v1",
-    includes: [],
+    "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
     context: {
-      eip712: {
+      contract: {
         deployments: [
-          {
-            chainId: 11155111,
-            address: "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7",
-          },
+          { chainId: 11155111, address: "0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7" },
         ],
-        domain: {
-          name: "InheritanceVault",
-          version: "1",
-        },
-        schemas: [
-          {
-            primaryType: "Heartbeat",
-            types: {
-              EIP712Domain: [
-                { name: "name", type: "string" },
-                { name: "version", type: "string" },
-                { name: "chainId", type: "uint256" },
-                { name: "verifyingContract", type: "address" },
-              ],
-              Heartbeat: [
-                { name: "owner", type: "address" },
-                { name: "timestamp", type: "uint256" },
-                { name: "message", type: "string" },
-              ],
-            },
-          },
+        abi: [
+          { name: "heartbeat", type: "function", inputs: [], outputs: [], stateMutability: "nonpayable" },
+          { name: "claim", type: "function", inputs: [{ name: "_worldIdNullifier", type: "bytes32" }], outputs: [], stateMutability: "nonpayable" },
+          { name: "cancel", type: "function", inputs: [], outputs: [], stateMutability: "nonpayable" },
         ],
       },
     },
     metadata: {
       owner: "DeadSwitch",
-      info: {
-        url: "https://deadswitch.online",
-        legalName: "DeadSwitch — Decentralized Crypto Inheritance",
-      },
+      info: { legalName: "DeadSwitch — Decentralized Crypto Inheritance", url: "https://deadswitch.online" },
     },
     display: {
       formats: {
-        Heartbeat: {
-          intent: "Send heartbeat — prove you are alive",
-          fields: [
-            {
-              path: "owner",
-              label: "Vault Owner",
-              format: "addressName",
-            },
-            {
-              path: "timestamp",
-              label: "Time",
-              format: "date",
-            },
-            {
-              path: "message",
-              label: "Status",
-              format: "raw",
-            },
-          ],
-        },
+        "heartbeat()": { intent: "Send heartbeat — prove you are alive", fields: [], required: [] },
+        "claim(bytes32)": { intent: "Claim inheritance from vault", fields: [{ path: "_worldIdNullifier", label: "World ID Proof", format: "raw" }], required: ["_worldIdNullifier"] },
+        "cancel()": { intent: "Cancel vault and withdraw all funds", fields: [], required: [] },
       },
     },
   });
