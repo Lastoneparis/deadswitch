@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAccount, useDeployContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, keccak256, toBytes } from 'viem';
+import { useAccount, useDeployContract, useWaitForTransactionReceipt, useBalance } from 'wagmi';
+import { parseEther, formatEther, keccak256, toBytes } from 'viem';
 import {
   Wallet, User, Clock, Coins, CheckCircle, ArrowRight, ArrowLeft, Shield,
   Loader2, AlertTriangle, ExternalLink, XCircle
@@ -20,6 +20,8 @@ const intervals = [
 
 export default function CreateVaultPage() {
   const { address, isConnected } = useAccount();
+  const { data: balanceData } = useBalance({ address });
+  const walletBalance = balanceData ? parseFloat(formatEther(balanceData.value)) : 0;
   const [step, setStep] = useState(1);
   const [beneficiary, setBeneficiary] = useState('');
   const [interval, setInterval] = useState(90);
@@ -71,7 +73,11 @@ export default function CreateVaultPage() {
         return beneficiary.startsWith('0x') && beneficiary.length >= 42;
       }
       case 3: return interval > 0;
-      case 4: return parseFloat(amount) > 0;
+      case 4: {
+        const amt = parseFloat(amount);
+        // Need amount > 0 AND (amount + 0.005 ETH buffer for gas) <= wallet balance
+        return amt > 0 && amt + 0.005 <= walletBalance;
+      }
       case 5: return true;
       default: return false;
     }
@@ -99,6 +105,13 @@ export default function CreateVaultPage() {
     // Validate minimum interval (contract requires >= 30 days)
     if (interval < 30) {
       setDeployError('Heartbeat interval must be at least 30 days.');
+      return;
+    }
+
+    // Validate sufficient balance (amount + gas buffer)
+    const amt = parseFloat(amount);
+    if (amt + 0.005 > walletBalance) {
+      setDeployError(`Insufficient balance. You need ${amt} ETH + ~0.005 ETH for gas. Wallet has ${walletBalance.toFixed(4)} ETH.`);
       return;
     }
 
@@ -390,17 +403,64 @@ export default function CreateVaultPage() {
                   <p className="text-sm text-muted">How much ETH to protect?</p>
                 </div>
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-4 py-3 pr-16 rounded-xl bg-background border border-border focus:border-primary focus:outline-none text-2xl font-bold"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-medium">ETH</span>
+              <div className="space-y-3">
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={walletBalance}
+                    placeholder="0.0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className={`w-full px-4 py-3 pr-16 rounded-xl bg-background border focus:outline-none text-2xl font-bold transition-colors ${
+                      amount && parseFloat(amount) + 0.005 > walletBalance
+                        ? 'border-danger focus:border-danger'
+                        : 'border-border focus:border-primary'
+                    }`}
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-medium">ETH</span>
+                </div>
+
+                {/* Wallet balance display */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-subtle">
+                    Wallet balance: <span className="font-mono text-muted">{walletBalance.toFixed(4)} ETH</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAmount(Math.max(0, walletBalance - 0.01).toFixed(4))}
+                    className="text-primary hover:underline font-medium"
+                    disabled={walletBalance <= 0.01}
+                  >
+                    Use max (minus gas)
+                  </button>
+                </div>
+
+                {/* Insufficient balance warning */}
+                {amount && parseFloat(amount) > 0 && parseFloat(amount) + 0.005 > walletBalance && (
+                  <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-danger/10 border border-danger/20">
+                    <AlertTriangle size={14} className="text-danger mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-danger font-semibold">
+                        Insufficient balance
+                      </p>
+                      <p className="text-[11px] text-muted mt-0.5">
+                        You need {amount} ETH + ~0.005 ETH for gas. Your wallet has {walletBalance.toFixed(4)} ETH.
+                        {walletBalance < 0.01 && (
+                          <> Get Sepolia ETH from <a href="https://sepoliafaucet.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">sepoliafaucet.com</a></>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Low balance warning */}
+                {walletBalance > 0 && walletBalance < 0.02 && (
+                  <p className="text-[11px] text-warning">
+                    ⚠ Low wallet balance. Get more Sepolia ETH from <a href="https://sepoliafaucet.com" target="_blank" rel="noopener noreferrer" className="underline">sepoliafaucet.com</a>
+                  </p>
+                )}
               </div>
             </>
           )}
