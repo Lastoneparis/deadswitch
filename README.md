@@ -1,5 +1,15 @@
 # DeadSwitch
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Live](https://img.shields.io/badge/live-deadswitch.online-10b981)](https://deadswitch.online)
+[![Network: Sepolia](https://img.shields.io/badge/network-Sepolia-627EEA)](https://sepolia.etherscan.io/address/0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7)
+[![Solidity: 0.8.20](https://img.shields.io/badge/Solidity-0.8.20-363636)](./contracts/contracts/InheritanceVault.sol)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000)](https://nextjs.org)
+[![Chainlink Automation](https://img.shields.io/badge/Chainlink-Automation%20Live-375BD2)](https://automation.chain.link/sepolia/87279356538326214029017935707370766485868215829937943885304798493436723241100)
+[![Ledger ERC-7730](https://img.shields.io/badge/Ledger-ERC--7730%20PR%20%232511-D4A017)](https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/2511)
+[![ENS](https://img.shields.io/badge/ENS-Live%20Resolution-5298FF)](https://deadswitch.online/api/ens/resolve/vitalik.eth)
+[![ETHGlobal Cannes 2026](https://img.shields.io/badge/ETHGlobal-Cannes%202026-FF3366)](https://ethglobal.com/events/cannes)
+
 **Your crypto shouldn't die with you.**
 
 > If you stop checking in, your family gets your crypto. No lawyer. No company. Just math.
@@ -23,6 +33,7 @@
 | 🎛 **Ledger PR** | [LedgerHQ/clear-signing-erc7730-registry#2511](https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/2511) |
 | 🏷 **ENS test** | [`/api/ens/resolve/vitalik.eth`](https://deadswitch.online/api/ens/resolve/vitalik.eth) |
 | 📋 **Submissions file** | [SUBMISSIONS.md](./SUBMISSIONS.md) |
+| 🛠 **Run locally** | [DEPLOYMENT.md](./DEPLOYMENT.md) |
 
 **Try the demo in 60 seconds**:
 1. Go to https://deadswitch.online/create
