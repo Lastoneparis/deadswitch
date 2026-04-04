@@ -1,27 +1,24 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* ── Premium dark vault palette ── */
-  --color-background: #060810;
-  --color-foreground: #f0f2f5;
-  --color-card: #0d1017;
-  --color-card-hover: #131720;
-  --color-border: #1a1f2e;
-  --color-border-light: #252b3d;
+  /* ── Single accent: emerald. Clean. Alive. ── */
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-card: #0c0c0f;
+  --color-card-hover: #111114;
+  --color-border: #18181b;
+  --color-border-light: #27272a;
 
-  /* ── Accent: teal/cyan instead of blue ── */
-  --color-primary: #06b6d4;
-  --color-primary-glow: #0891b2;
+  --color-primary: #10b981;
+  --color-primary-glow: #059669;
 
-  /* ── State colors (richer) ── */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
-  --color-gold: #e8b44d;
+  --color-gold: #fbbf24;
 
-  /* ── Text shades ── */
-  --color-muted: #8b95a8;
-  --color-subtle: #5a6478;
+  --color-muted: #a1a1aa;
+  --color-subtle: #52525b;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -30,81 +27,32 @@
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-}
-
-/* ── Glassmorphism card ── */
-.glass-card {
-  background: linear-gradient(135deg, rgba(13, 16, 23, 0.8), rgba(13, 16, 23, 0.95));
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(26, 31, 46, 0.6);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ── Pulse glows ── */
 @keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.25), 0 0 50px rgba(16, 185, 129, 0.08); }
-  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.45), 0 0 80px rgba(16, 185, 129, 0.15); }
+  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 60px rgba(16, 185, 129, 0.06); }
+  50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.4), 0 0 100px rgba(16, 185, 129, 0.12); }
 }
-
 @keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.25), 0 0 50px rgba(239, 68, 68, 0.08); }
-  50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.55), 0 0 90px rgba(239, 68, 68, 0.2); }
+  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.2), 0 0 60px rgba(239, 68, 68, 0.06); }
+  50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.5), 0 0 100px rgba(239, 68, 68, 0.15); }
 }
-
 @keyframes pulse-amber {
-  0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.2), 0 0 50px rgba(245, 158, 11, 0.06); }
-  50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.35), 0 0 80px rgba(245, 158, 11, 0.12); }
-}
-
-@keyframes pulse-teal {
-  0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.2), 0 0 50px rgba(6, 182, 212, 0.06); }
-  50% { box-shadow: 0 0 30px rgba(6, 182, 212, 0.35), 0 0 80px rgba(6, 182, 212, 0.12); }
+  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.3); }
 }
 
 .pulse-green { animation: pulse-green 2s ease-in-out infinite; }
 .pulse-red { animation: pulse-red 1s ease-in-out infinite; }
 .pulse-amber { animation: pulse-amber 1.5s ease-in-out infinite; }
-.pulse-teal { animation: pulse-teal 2s ease-in-out infinite; }
-
-/* ── Heartbeat ring ripple ── */
-@keyframes ripple {
-  0% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-
-.heartbeat-ripple::before,
-.heartbeat-ripple::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  animation: ripple 2s ease-out infinite;
-}
-.heartbeat-ripple::after {
-  animation-delay: 1s;
-}
-
-/* ── Live price ticker ── */
-@keyframes price-flash-up {
-  0% { color: var(--color-foreground); }
-  30% { color: var(--color-success); }
-  100% { color: var(--color-foreground); }
-}
-@keyframes price-flash-down {
-  0% { color: var(--color-foreground); }
-  30% { color: var(--color-danger); }
-  100% { color: var(--color-foreground); }
-}
-.price-up { animation: price-flash-up 1.5s ease-out; }
-.price-down { animation: price-flash-down 1.5s ease-out; }
 
 /* ── Confetti ── */
 @keyframes confetti-fall {
   0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
   100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
-
 .confetti-piece {
   position: fixed;
   width: 10px;
@@ -114,25 +62,13 @@ body {
   z-index: 9999;
 }
 
-/* ── Subtle mesh gradient background ── */
-.mesh-bg {
-  background-image:
-    radial-gradient(at 20% 80%, rgba(6, 182, 212, 0.04) 0, transparent 50%),
-    radial-gradient(at 80% 20%, rgba(16, 185, 129, 0.03) 0, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(232, 180, 77, 0.02) 0, transparent 50%);
+/* ── Hero glow ── */
+.hero-glow {
+  background: radial-gradient(ellipse 600px 400px at 50% 0%, rgba(16, 185, 129, 0.08), transparent);
 }
 
 /* ── Smooth scrollbar ── */
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-subtle);
-}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-subtle); }

@@ -1,100 +1,190 @@
-# DeadSwitch -- HeyGen Video Script
-## ETHGlobal Cannes 2026 Submission
+# DeadSwitch — HeyGen Video Script
+## ETHGlobal Cannes 2026 Hackathon Submission
 
-**Total duration:** ~2:30  
-**HeyGen avatar settings:** Professional male/female presenter, confident and clear tone, medium pace, business casual attire. Background: dark gradient or minimal office. Eye contact with camera throughout.  
-**Screen recordings:** Prepare clips from deadswitch.online for each [SCREEN] section.
-
----
-
-### [SCENE 1 -- TITLE HOOK] (0:00 - 0:05)
-
-**[SCREEN: DeadSwitch logo animates in. Tagline fades up: "Your crypto lives on."]**
-
-**NARRATION:**  
-"What happens to your crypto when you die? Right now... nothing. It's gone forever."
+**Total duration:** 3:00–3:30
+**HeyGen settings:** Professional avatar, confident + warm tone, medium pace, dark minimal background. Eye contact with camera.
 
 ---
 
-### [SCENE 2 -- PROBLEM] (0:05 - 0:20)
+## SCENE 1 — HOOK (0:00–0:10)
 
-**[SCREEN: Stat cards animate in sequence -- "$140B lost", "No inheritance protocol", "Custodial solutions = trust assumptions"]**
+**[BACKGROUND: Black screen. Text types in: "$140,000,000,000"]**
 
-**NARRATION:**  
-"Over 140 billion dollars in crypto is permanently lost because there's no inheritance plan. Traditional solutions require trusting a custodian with your keys -- that defeats the entire purpose of self-custody. And lawyers don't understand seed phrases. We need a trustless, on-chain solution."
+**NARRATION:**
+"One hundred and forty billion dollars. That's how much crypto is estimated to be permanently lost — because the owners died without a plan. Their families got nothing. No recovery. No inheritance. Just gone."
 
----
-
-### [SCENE 3 -- SOLUTION OVERVIEW] (0:20 - 0:40)
-
-**[SCREEN: Animated diagram -- Owner sends heartbeats, clock counts down, Chainlink triggers recovery, heir verifies with World ID, funds transfer.]**
-
-**NARRATION:**  
-"DeadSwitch is a decentralized dead man's switch for crypto inheritance. Here's how it works: you deposit funds into a smart contract vault and designate a beneficiary. Every month, you send a heartbeat -- a single transaction that says 'I'm still here.' If you stop checking in, Chainlink Automation detects the missed heartbeat and triggers the recovery process automatically. Your heir verifies their identity with World ID -- fully sybil-resistant -- and claims the funds. No custodian. No lawyer. No trust assumptions. Just code."
+**[Text fades. Beat of silence.]**
 
 ---
 
-### [SCENE 4 -- LIVE DEMO] (0:40 - 1:40)
+## SCENE 2 — PROBLEM (0:10–0:35)
 
-**[SCREEN: Browser showing deadswitch.online dashboard]**
+**[BACKGROUND: Slide — "The Problem" with 3 points appearing one by one]**
 
-**NARRATION:**  
-"Let me show you how it works live on Sepolia."
+**NARRATION:**
+"Here's the thing. Traditional inheritance doesn't work for crypto. You can't put a private key in a will — lawyers don't understand seed phrases, and courts can't access wallets.
 
-**[SCREEN: Dashboard view. Vault card shows status ACTIVE in green. Balance: 0.5 ETH. Last heartbeat timestamp visible. Beneficiary shown as an ENS name like 'alice.eth'.]**
+The current solutions? They require you to trust a company with your keys. That defeats the entire point of self-custody.
 
-"Here's the owner dashboard. The vault is active, showing our balance in ETH with a live USD conversion from Chainlink Price Feeds. The beneficiary is set using an ENS name -- human-readable, no hex addresses to get wrong."
+What crypto needs is a trustless, decentralized inheritance protocol. Something that works automatically, without any company, any custodian, or any lawyer."
 
-**[SCREEN: Owner clicks "Send Heartbeat" button. Green pulse animation ripples from the button. Toast notification: "Heartbeat confirmed. Next deadline: 30 days."]**
+**[Pause]**
 
-"Sending a heartbeat is one click. The contract records the timestamp on-chain. The countdown resets to 30 days."
-
-**[SCREEN: Owner clicks "Simulate Death" button. A confirmation modal appears. Owner confirms. The timer fast-forwards visually. Status badge transitions from green ACTIVE to red RECOVERY. Warning banner appears.]**
-
-"Now let's simulate what happens if the owner disappears. We click Simulate Death -- the heartbeat deadline passes, and Chainlink Automation triggers the recovery state. The vault turns red. Recovery mode is now active."
-
-**[SCREEN: Switch to heir view. "Verify with World ID" button prominent. Heir clicks it. World ID orb verification modal appears. Verification completes with a checkmark.]**
-
-"Switching to the heir's perspective. Before claiming anything, they must prove their identity with World ID. This prevents sybil attacks -- only the real, verified beneficiary can claim."
-
-**[SCREEN: Heir clicks "Claim Funds". Transaction confirms. Gold confetti animation fills the screen. Balance updates. Success message: "0.5 ETH transferred to alice.eth".]**
-
-"Identity verified. One click to claim. The funds transfer directly to the heir's wallet. No intermediary touched those funds at any point."
+"That's what we built."
 
 ---
 
-### [SCENE 5 -- TECHNICAL ARCHITECTURE] (1:40 - 2:00)
+## SCENE 3 — SOLUTION (0:35–1:05)
 
-**[SCREEN: Architecture diagram with labeled components -- Smart Contract (Sepolia), Chainlink Automation, Chainlink Price Feeds, World ID, 0G Storage, Flare TEE, ENS, Ledger.]**
+**[BACKGROUND: Slide — Flow diagram: Owner → Heartbeat → Clock → Chainlink → World ID → Heir]**
 
-**NARRATION:**  
-"Under the hood, DeadSwitch is fully non-custodial and modular. The core is a Solidity vault contract on Ethereum. Chainlink Automation monitors heartbeat deadlines and triggers recovery without any centralized server. For advanced users, we split recovery keys using Shamir Secret Sharing -- encrypted shards are stored on 0G's decentralized storage network, with Flare TEE attestations guaranteeing shard integrity. Every transaction supports Ledger hardware wallets through ERC-7730 clear signing -- you see exactly what you're approving on your device screen."
+**NARRATION:**
+"DeadSwitch is a dead man's switch for crypto. Here's how it works in three simple steps.
 
----
+First — you deposit your crypto into a smart contract vault and designate a beneficiary. Your heir. This can be a wallet address or an ENS name like alice.eth.
 
-### [SCENE 6 -- SPONSOR INTEGRATIONS] (2:00 - 2:15)
+Second — you check in periodically by sending a heartbeat. One click, once a month. The contract records it on-chain. As long as you keep checking in, nothing happens.
 
-**[SCREEN: Sponsor logos appear in a grid, each with a one-line description that highlights as the narrator mentions it.]**
+Third — if you stop checking in... Chainlink Automation detects the missed heartbeat automatically. Recovery mode activates. Your heir verifies their identity with World ID — that's biometric, sybil-resistant verification — and claims the funds.
 
-**NARRATION:**  
-"DeadSwitch integrates six ETHGlobal Cannes sponsors: Chainlink for automation and price feeds. World for sybil-resistant identity. Ledger for secure hardware signing. ENS for human-readable addresses. 0G for decentralized shard storage. And Flare for TEE-backed trust attestations."
-
----
-
-### [SCENE 7 -- CLOSING] (2:15 - 2:30)
-
-**[SCREEN: deadswitch.online URL centered on screen. Tagline: "Your crypto lives on." GitHub link below.]**
-
-**NARRATION:**  
-"Crypto gave us self-sovereignty. DeadSwitch makes sure that sovereignty survives us. Try it live at deadswitch.online. Your crypto should live on -- even when you don't."
-
-**[SCREEN: Fade to DeadSwitch logo.]**
+No intermediary touched the funds at any point. No company. No custodian. Just math."
 
 ---
 
-## Production Notes
+## SCENE 4 — LIVE DEMO (1:05–2:15)
 
-- **Screen recordings needed:** 4 clips from deadswitch.online (dashboard, heartbeat, simulate death, heir claim flow)
-- **HeyGen voice:** Use "confident and warm" preset. Avoid robotic cadence -- slightly slower on key phrases like "no custodian, no lawyer, no trust assumptions"
-- **Music:** Subtle, modern electronic background track. Slight build during demo, peak at confetti moment, fade for closing
-- **Pacing:** The demo section is the longest and most important -- let the screen recordings breathe. Don't rush the transitions between owner and heir views.
+**[BACKGROUND: Screen recording of deadswitch.online]**
+
+### 4A — Dashboard (1:05–1:20)
+
+**[SCREEN: Browser showing deadswitch.online/dashboard. Green ACTIVE status. Live countdown ticking: "24d 13h 45m 32s". Balance: 0.5 ETH with Chainlink USD price. Beneficiary shown as ENS name.]**
+
+**NARRATION:**
+"Let me show you the product live. This is the owner's dashboard. The vault is active — you can see the live countdown ticking in real-time. The balance shows ETH converted to USD using Chainlink Price Feeds. The beneficiary is set as an ENS name — human-readable, no hex addresses to get wrong."
+
+### 4B — Heartbeat (1:20–1:35)
+
+**[SCREEN: Owner clicks "Send Heartbeat" button. Green pulse animation. Toast: "Alive confirmed — vault timer reset". Countdown resets to 30 days.]**
+
+**NARRATION:**
+"Sending a heartbeat is literally one click. Watch — I press the button, the contract records it on-chain, and the countdown resets. That's it. One click a month to protect your family's inheritance."
+
+### 4C — Simulate Death (1:35–1:50)
+
+**[SCREEN: Click "Simulate Death" in demo controls. Status card transitions from green to RED. Recovery timeline fills up. Pulsing red siren appears. Status: RECOVERY.]**
+
+**NARRATION:**
+"Now let's simulate what happens when the owner disappears. We skip forward 90 days. Chainlink Automation detects the expired heartbeat and triggers recovery mode. The vault turns red. The beneficiary can now act."
+
+### 4D — Heir Claims (1:50–2:15)
+
+**[SCREEN: World ID verification appears. Click verify. Checkmark. Then "Claim Inheritance" gold button. Click it. Gold confetti fills the screen. "Inheritance Transferred" message. Balance: 0 ETH.]**
+
+**NARRATION:**
+"Switching to the heir's perspective. First, they verify their identity with World ID — this prevents anyone else from claiming. Proof of humanity, not just a private key.
+
+Now they click Claim. Watch — the funds transfer directly to their wallet. No intermediary. No waiting. No lawyer. That's the full cycle: deposit, heartbeat, recovery, claim."
+
+**[Pause on confetti screen]**
+
+"From vault creation to inheritance claim, the owner's keys were never exposed. Fully non-custodial."
+
+---
+
+## SCENE 5 — ARCHITECTURE (2:15–2:40)
+
+**[BACKGROUND: Slide — Architecture diagram with labeled components]**
+
+**NARRATION:**
+"Under the hood. The core is a Solidity vault contract deployed on Ethereum Sepolia. Chainlink Automation monitors heartbeat deadlines — no centralized server needed.
+
+For the price feed in the dashboard, we use Chainlink's ETH/USD oracle directly on-chain.
+
+World ID provides sybil-resistant identity verification for heirs — biometric proof that you're a real, unique person.
+
+For advanced recovery, we split keys using Shamir Secret Sharing. The encrypted shards are stored on 0G's decentralized storage network, with Flare TEE attestations guaranteeing shard integrity during reconstruction.
+
+Every transaction supports Ledger hardware wallets through ERC-7730 clear signing. ENS resolves human-readable names to addresses."
+
+---
+
+## SCENE 6 — SPONSORS (2:40–2:55)
+
+**[BACKGROUND: Slide — 6 sponsor logos in a clean grid, each with one line]**
+
+**NARRATION:**
+"Six sponsor integrations, all live:
+
+Chainlink — Automation and Price Feeds.
+World — Sybil-resistant identity.
+Ledger — Hardware wallet clear signing.
+ENS — Human-readable addresses.
+0G — Decentralized shard storage.
+Flare — TEE trust attestations."
+
+---
+
+## SCENE 7 — CLOSING (2:55–3:15)
+
+**[BACKGROUND: Dark screen. deadswitch.online in large text. Logo below.]**
+
+**NARRATION:**
+"We built DeadSwitch because crypto gave us financial sovereignty — but that sovereignty dies with us if we don't plan for it.
+
+One hundred and forty billion dollars in crypto has no heir. No recovery plan. No safety net.
+
+DeadSwitch changes that. Try it live at deadswitch.online.
+
+Your crypto should live on. Even when you don't."
+
+**[Logo holds for 3 seconds. Fade to black.]**
+
+---
+
+## PRODUCTION NOTES FOR HEYGEN
+
+### Avatar Settings
+- **Style:** Professional, business casual
+- **Tone:** Confident, warm, trustworthy — like a fintech CEO, not a crypto bro
+- **Speed:** Medium pace. Slow down on key phrases: "no intermediary", "fully non-custodial", "just math"
+- **Eye contact:** Camera, always
+
+### Background Music
+- Subtle electronic/ambient track
+- Builds slightly during demo section (Scene 4)
+- Peaks briefly at confetti moment
+- Quiet and atmospheric for closing
+
+### Screen Recordings Needed (4 clips)
+
+| # | What to record | Duration | How |
+|---|---------------|----------|-----|
+| 1 | **Dashboard overview** — green status, countdown ticking, Chainlink price, beneficiary ENS | 15s | Open /dashboard with wallet connected, slowly scroll |
+| 2 | **Send Heartbeat** — click button, green pulse, success toast, countdown resets | 12s | Click "Send Heartbeat" in demo, capture the full animation |
+| 3 | **Simulate Death** — click, status goes red, recovery timeline fills, siren pulses | 12s | Click "Simulate Death", wait for full red transition |
+| 4 | **Heir Claim** — World ID verify, click Claim, gold confetti, "Transferred" screen | 15s | Verify World ID, then claim, hold on confetti 3 seconds |
+
+### Static Slides Needed (5 slides, make in Canva 1920x1080)
+
+| # | Slide | Content |
+|---|-------|---------|
+| 1 | **Hook** | Black background. "$140,000,000,000" in large white monospace text. Nothing else. |
+| 2 | **Problem** | "The Problem" title. 3 lines: "No inheritance protocol for crypto" / "Custodial solutions defeat self-custody" / "Lawyers don't understand seed phrases" |
+| 3 | **Flow** | Horizontal flow: Owner icon → "Heartbeat" → Clock icon → "Chainlink detects" → World ID icon → "Heir claims". Use arrows. Green accent color on dark. |
+| 4 | **Architecture** | Center: "InheritanceVault.sol". Connected to 6 boxes: Chainlink (top), World ID (top-right), Ledger (right), ENS (bottom-right), 0G (bottom-left), Flare (left). Clean lines. |
+| 5 | **Sponsors** | 2x3 grid of sponsor logos. Under each: one-line role. "Chainlink: Automation + Oracles", "World: Identity", etc. |
+
+### Slide Design Guidelines
+- Background: #09090b (match your website)
+- Text: #fafafa
+- Accent: #10b981 (emerald green — same as your site)
+- Font: Inter or Geist Sans
+- No gradients, no stock images, no decorative elements
+- Let the content breathe — lots of empty space
+
+### Final Tips
+- Total video should be 3:00–3:15
+- The demo section (Scene 4) is the most important — let the screen recordings breathe, don't rush
+- Add 0.5s fade transitions between scenes
+- HeyGen "confident and warm" voice preset works best
+- Export at 1080p minimum
