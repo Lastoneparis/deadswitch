@@ -222,7 +222,12 @@ export default function Home() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              {['Chainlink', 'World', 'Ledger', 'ENS', '0G', 'Flare'].map((s) => (
+              {['Chainlink', 'World', 'Ledger'].map((s) => (
+                <span key={s} className="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-semibold">
+                  {s}
+                </span>
+              ))}
+              {['ENS', '0G', 'Flare'].map((s) => (
                 <span key={s} className="px-3 py-1.5 rounded-lg bg-card border border-border text-xs text-subtle font-medium">
                   {s}
                 </span>
