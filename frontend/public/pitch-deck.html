@@ -845,45 +845,53 @@ if (window.location.search.includes('print=true')) {
   <div class="slide" data-slide="6">
     <div class="slide-content">
       <h2>Sponsor <span class="gradient-text">Integrations</span></h2>
-      <div class="card" style="padding:0;overflow:hidden;">
+      <p style="color:var(--text-dim);font-size:14px;margin-bottom:12px;">Applying for 3 prize tracks — all with real, verifiable implementations.</p>
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
         <table class="sponsor-table">
           <thead>
             <tr>
               <th>Sponsor</th>
               <th>Integration</th>
-              <th>Why It Matters</th>
+              <th>Evidence</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><span class="sponsor-name">Chainlink</span></td>
-              <td>Dead man's switch timer — automated heartbeat monitoring</td>
-              <td><span class="sponsor-track">Decentralized, unstoppable</span></td>
-            </tr>
-            <tr>
-              <td><span class="sponsor-name">World</span></td>
-              <td>Anti-bot / Sybil protection — ensures claimer is a unique human (not identity proof — combined with pre-approved address)</td>
-              <td><span class="sponsor-track">Prevents automated fraud</span></td>
-            </tr>
-            <tr>
-              <td><span class="sponsor-name">Ledger</span></td>
-              <td>Hardware proof of life + heir claim signing</td>
-              <td><span class="sponsor-track">Can't be faked remotely</span></td>
-            </tr>
-            <tr>
-              <td><span class="sponsor-name">0G</span></td>
-              <td>Encrypted key shard storage (Shamir shares)</td>
-              <td><span class="sponsor-track">Designed for long-term resilience</span></td>
+              <td>Contract implements checkUpkeep / performUpkeep (Automation interface). Recovery triggered by keeper network.</td>
+              <td><span class="sponsor-track">Live upkeep, 2.1 LINK</span></td>
             </tr>
             <tr>
               <td><span class="sponsor-name">ENS</span></td>
-              <td>Human-readable will: hugo.eth &#8594; wife.eth</td>
-              <td><span class="sponsor-track">Human-readable will</span></td>
+              <td>Heirs named by ENS (wife.eth). Live resolution, stored on-chain in vault.</td>
+              <td><span class="sponsor-track">/api/ens/resolve</span></td>
             </tr>
             <tr>
-              <td><span class="sponsor-name">Flare</span></td>
-              <td>TEE key reconstruction in trusted execution</td>
-              <td><span class="sponsor-track">Tamper-proof</span></td>
+              <td><span class="sponsor-name">Ledger</span></td>
+              <td>ERC-7730 manifest covering 9 vault functions with clear signing intents.</td>
+              <td><span class="sponsor-track">PR #2511 submitted</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--text-dim);font-size:12px;margin-bottom:8px;">Additional integrations (in codebase, not primary submissions):</p>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table class="sponsor-table">
+          <tbody>
+            <tr>
+              <td><span class="sponsor-name" style="opacity:0.7;">World ID</span></td>
+              <td style="opacity:0.7;">Sybil-resistant heir verification via @worldcoin/idkit</td>
+              <td style="opacity:0.7;"><span class="sponsor-track">Live widget</span></td>
+            </tr>
+            <tr>
+              <td><span class="sponsor-name" style="opacity:0.7;">0G</span></td>
+              <td style="opacity:0.7;">Encrypted Shamir key shard storage via @0glabs/0g-ts-sdk</td>
+              <td style="opacity:0.7;"><span class="sponsor-track">SDK integrated</span></td>
+            </tr>
+            <tr>
+              <td><span class="sponsor-name" style="opacity:0.7;">Flare</span></td>
+              <td style="opacity:0.7;">TEE attestation cryptography for key reconstruction</td>
+              <td style="opacity:0.7;"><span class="sponsor-track">Hash chain</span></td>
             </tr>
           </tbody>
         </table>
