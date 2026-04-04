@@ -164,6 +164,20 @@ export default function ClaimPage() {
         </div>
       )}
 
+      {isConnected && !loadingHeir && heirVaults.length === 0 && !vault && (
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <Wallet size={18} className="text-subtle" />
+            <p className="font-semibold text-sm">No claimable vaults found</p>
+          </div>
+          <p className="text-xs text-muted">
+            This wallet ({address?.slice(0, 6)}...{address?.slice(-4)}) is not the beneficiary
+            of any vault currently in recovery mode. Make sure you're connected to the right
+            wallet — the one that was designated as heir when the vault was created.
+          </p>
+        </div>
+      )}
+
       {isConnected && heirVaults.length > 0 && !vault && (
         <div className="bg-danger/10 border border-danger/20 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
@@ -183,30 +197,41 @@ export default function ClaimPage() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="space-y-2">
-        <div className="flex gap-3">
-          <input
-            type="text"
-            placeholder="0x... / vitalik.eth / vault ID"
-            value={vaultInput}
-            onChange={(e) => { setVaultInput(e.target.value); setSearchError(''); }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:outline-none text-sm font-mono"
-          />
-          <button onClick={handleSearch} disabled={searching}
-            className="px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors flex items-center gap-2 cursor-pointer">
-            {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            {t('claim.search')}
-          </button>
-        </div>
-        {searchError && (
-          <div className="flex items-center gap-2 text-sm text-danger">
-            <AlertTriangle size={14} />
-            {searchError}
+      {/* Manual search (advanced) */}
+      <details className="group">
+        <summary className="cursor-pointer text-xs text-subtle hover:text-muted transition-colors flex items-center gap-2 py-2">
+          <span>Advanced: search by owner address or vault ID</span>
+          <span className="text-[10px] text-subtle group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div className="space-y-2 mt-2">
+          <p className="text-[11px] text-subtle">
+            If you know the vault owner's address or the vault ID, you can look it up manually.
+            Note: searching here does NOT automatically give you claim rights — you still need to
+            be the designated beneficiary.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Owner address (0x...) or ENS name"
+              value={vaultInput}
+              onChange={(e) => { setVaultInput(e.target.value); setSearchError(''); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:outline-none text-sm font-mono"
+            />
+            <button onClick={handleSearch} disabled={searching}
+              className="px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors flex items-center gap-2 cursor-pointer">
+              {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+              {t('claim.search')}
+            </button>
           </div>
-        )}
-      </div>
+          {searchError && (
+            <div className="flex items-center gap-2 text-sm text-danger">
+              <AlertTriangle size={14} />
+              {searchError}
+            </div>
+          )}
+        </div>
+      </details>
 
       <AnimatePresence mode="wait">
         {vault && !claimed && (
