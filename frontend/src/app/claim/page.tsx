@@ -130,6 +130,21 @@ export default function ClaimPage() {
         <p className="text-muted mt-2">{t('claim.subtitle')}</p>
       </div>
 
+      {/* Instructional banner */}
+      <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+          <User size={16} className="text-primary" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-primary">For the beneficiary (heir)</p>
+          <p className="text-xs text-muted mt-1 leading-relaxed">
+            Connect the wallet that was designated as beneficiary. We'll auto-detect any
+            vaults where you're the heir. Then verify your identity with World ID and claim
+            the inheritance.
+          </p>
+        </div>
+      </div>
+
       {/* Wallet requirement */}
       {!isConnected && (
         <div className="bg-warning/10 border border-warning/20 rounded-2xl p-5 flex items-start gap-3">

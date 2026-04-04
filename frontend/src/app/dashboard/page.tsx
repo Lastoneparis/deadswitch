@@ -388,6 +388,9 @@ export default function DashboardPage() {
   const handleClaim = useCallback(async () => {
     if (!vault || !address) return;
 
+    let onChainSuccess = false;
+    let onChainError = '';
+
     // On-chain claim with the real nullifier stored during vault creation
     if (isConnected && vault.vault_address && vault.world_id_nullifier) {
       try {
@@ -398,25 +401,45 @@ export default function DashboardPage() {
           args: [vault.world_id_nullifier as `0x${string}`],
         });
         addTx(hash, 'Claim');
+        onChainSuccess = true;
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.warn('On-chain claim failed:', errMsg);
-        setOnChainMessage(`On-chain claim failed: ${errMsg.slice(0, 100)}`);
+        // Parse common contract reverts for clearer messages
+        if (errMsg.includes('Recovery delay not elapsed')) {
+          onChainError = '30-day recovery delay not yet passed (production safety). Demo only (DB update).';
+        } else if (errMsg.includes('Not beneficiary')) {
+          onChainError = 'Only the beneficiary wallet can claim. Switch to the heir\'s wallet.';
+        } else if (errMsg.includes('Vault not in recovery mode')) {
+          onChainError = 'Vault not in recovery mode yet. Run Simulate Death first.';
+        } else if (errMsg.includes('User rejected')) {
+          onChainError = 'Transaction rejected in wallet.';
+          return; // Don't show demo success if user rejected
+        } else {
+          onChainError = `On-chain claim failed: ${errMsg.slice(0, 120)}`;
+        }
+        setOnChainMessage(onChainError);
       }
     }
 
-    // Backend claim
+    // Backend claim (for demo UI state — does not transfer ETH)
     try { await claimInheritance(vault.id, address); } catch { /* demo */ }
 
     setClaimSuccess(true);
     setShowConfetti(true);
-    showFeedback(`Inheritance of ${vault.balance} ETH transferred`, 'success');
+    if (onChainSuccess) {
+      showFeedback(`✓ ${vault.balance} ETH transferred on-chain`, 'success');
+    } else {
+      showFeedback(`Demo claim (no on-chain transfer — see details)`, 'warning');
+    }
     setTimeout(() => setShowConfetti(false), 100);
     setTimeline((prev) => [
       {
         type: 'claimed',
         date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        description: `Inheritance of ${vault.balance} ETH transferred to ${vault.beneficiary_ens || vault.beneficiary_address.slice(0, 10)}...`,
+        description: onChainSuccess
+          ? `On-chain: ${vault.balance} ETH transferred to ${vault.beneficiary_ens || vault.beneficiary_address.slice(0, 10)}...`
+          : `Demo claim — DB only (${onChainError.slice(0, 60)})`,
       },
       ...prev,
     ]);
@@ -689,7 +712,7 @@ export default function DashboardPage() {
                 <p className="text-muted mt-2">{t('dash.recovery_mode_desc')}</p>
               </div>
               {!worldIdVerified ? (
-                <div className="max-w-sm mx-auto">
+                <div className="max-w-sm mx-auto" data-worldid-section>
                   <WorldIdVerify onVerified={() => setWorldIdVerified(true)} />
                 </div>
               ) : (
@@ -716,24 +739,29 @@ export default function DashboardPage() {
           <h3 className="text-sm font-bold text-primary uppercase tracking-wider">{t('dash.live_demo')}</h3>
           <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">{t('dash.for_judges')}</span>
         </div>
-        <p className="text-xs text-subtle mb-5">{t('dash.demo_desc')}</p>
+        <p className="text-xs text-subtle mb-3">{t('dash.demo_desc')}</p>
+        <div className="bg-warning/5 border border-warning/20 rounded-lg px-3 py-2 mb-4">
+          <p className="text-[11px] text-muted leading-relaxed">
+            <span className="text-warning font-semibold">Flow:</span> (1) Send heartbeat as owner →
+            (2) Simulate Death → (3) Disconnect wallet, switch to <span className="font-mono">beneficiary</span> wallet →
+            (4) Go to <span className="font-mono">/claim</span> → verify World ID → claim funds.
+            The owner can't claim their own vault — only the designated heir can.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-3">
           <button onClick={handleHeartbeat}
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-semibold hover:bg-success/20 transition-all cursor-pointer">
-            <Play size={14} /> {t('dash.send_heartbeat')}
+            <Play size={14} /> 1. {t('dash.send_heartbeat')}
           </button>
           <button onClick={handleSimulateDeath}
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm font-semibold hover:bg-danger/20 transition-all cursor-pointer group">
-            <FastForward size={14} className="group-hover:animate-pulse" /> {t('dash.simulate_death')}
+            <FastForward size={14} className="group-hover:animate-pulse" /> 2. {t('dash.simulate_death')}
           </button>
-          <button onClick={() => {
-            if (status !== 'recovery') {
-              handleSimulateDeath().then(() => { setTimeout(() => { setWorldIdVerified(true); setTimeout(() => handleClaim(), 500); }, 500); });
-            } else if (!worldIdVerified) { setWorldIdVerified(true); setTimeout(() => handleClaim(), 500); } else { handleClaim(); }
-          }}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-sm font-semibold hover:bg-gold/20 transition-all cursor-pointer">
-            <UserCheck size={14} /> {t('dash.claim_as_heir')}
-          </button>
+          <a href="/claim" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-sm font-semibold hover:bg-gold/20 transition-all cursor-pointer"
+            title="Open claim page in new tab — switch to beneficiary wallet">
+            <UserCheck size={14} /> 3. Go to Claim Page →
+          </a>
           <button onClick={handleReset}
             className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-subtle text-sm font-medium hover:text-foreground transition-all cursor-pointer">
             <RotateCcw size={14} /> {t('dash.reset')}

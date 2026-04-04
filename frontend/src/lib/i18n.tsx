@@ -211,6 +211,8 @@ const translations: Record<string, Record<string, string>> = {
     'claim.status_recovery': 'Status: Recovery',
     'claim.connect_to_claim': 'Connect Wallet to Claim',
     'claim.connect_to_claim_desc': 'You must connect the beneficiary wallet and verify your identity with World ID before claiming.',
+    'claim.no_vault_found': 'No vault found. Try an owner address, ENS name, or vault ID.',
+    'claim.ens_not_found': 'ENS name could not be resolved.',
 
     // Timeline labels
     'timeline.heartbeat': 'Heartbeat',
@@ -406,6 +408,8 @@ const translations: Record<string, Record<string, string>> = {
     'claim.status_recovery': 'Statut : Récupération',
     'claim.connect_to_claim': 'Connectez-vous pour réclamer',
     'claim.connect_to_claim_desc': 'Vous devez connecter le portefeuille bénéficiaire et vérifier votre identité avec World ID.',
+    'claim.no_vault_found': 'Aucun coffre trouvé. Essayez une adresse, un nom ENS ou un ID de coffre.',
+    'claim.ens_not_found': 'Le nom ENS n\'a pas pu être résolu.',
 
     // Timeline
     'timeline.heartbeat': 'Battement',
