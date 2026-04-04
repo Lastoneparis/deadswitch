@@ -711,7 +711,19 @@ export default function DashboardPage() {
                 <h2 className="text-3xl font-bold text-danger">{t('dash.recovery_mode_active')}</h2>
                 <p className="text-muted mt-2">{t('dash.recovery_mode_desc')}</p>
               </div>
-              {!worldIdVerified ? (
+              {address?.toLowerCase() !== vault.beneficiary_address.toLowerCase() ? (
+                <div className="bg-danger/10 border border-danger/30 rounded-2xl p-5 max-w-md mx-auto space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={18} className="text-danger" />
+                    <p className="font-semibold text-danger text-sm">Wrong wallet — you can't claim your own vault</p>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Only the beneficiary can claim. Currently you're connected as the <span className="font-semibold">owner</span>.
+                    Switch to the heir's wallet ({vault.beneficiary_ens || vault.beneficiary_address.slice(0, 8) + '...' + vault.beneficiary_address.slice(-6)})
+                    or go to <a href="/claim" target="_blank" className="text-primary hover:underline">the claim page</a>.
+                  </p>
+                </div>
+              ) : !worldIdVerified ? (
                 <div className="max-w-sm mx-auto" data-worldid-section>
                   <WorldIdVerify onVerified={() => setWorldIdVerified(true)} />
                 </div>

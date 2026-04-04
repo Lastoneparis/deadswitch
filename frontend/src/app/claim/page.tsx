@@ -292,8 +292,41 @@ export default function ClaimPage() {
                     <p className="font-semibold text-sm">{t('claim.connect_to_claim')}</p>
                     <p className="text-xs text-muted">{t('claim.connect_to_claim_desc')}</p>
                   </div>
+                ) : address?.toLowerCase() !== vault.beneficiary_address.toLowerCase() ? (
+                  <div className="bg-danger/10 border border-danger/30 rounded-2xl p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={18} className="text-danger" />
+                      <p className="font-semibold text-danger text-sm">Wrong wallet connected</p>
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Only the designated beneficiary can claim this vault. The smart contract enforces this
+                      with <code className="text-[10px] bg-background px-1 py-0.5 rounded">onlyBeneficiary</code> — any other wallet will revert.
+                    </p>
+                    <div className="bg-background border border-border rounded-lg p-3 space-y-1.5 text-[11px] font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="text-subtle w-20">Expected:</span>
+                        <span className="text-success">{vault.beneficiary_ens || vault.beneficiary_address.slice(0, 10) + '...' + vault.beneficiary_address.slice(-6)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-subtle w-20">You have:</span>
+                        <span className="text-danger">{address?.slice(0, 10)}...{address?.slice(-6)}</span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      Switch to the beneficiary wallet in MetaMask, then reload this page.
+                    </p>
+                  </div>
                 ) : !worldIdVerified ? (
-                  <WorldIdVerify onVerified={() => setWorldIdVerified(true)} />
+                  <div className="space-y-3">
+                    <div className="bg-success/5 border border-success/20 rounded-xl p-3 flex items-start gap-2">
+                      <CheckCircle size={14} className="text-success mt-0.5 shrink-0" />
+                      <p className="text-xs text-muted">
+                        <span className="text-success font-semibold">Beneficiary wallet confirmed.</span>
+                        {' '}Now verify you're a real human with World ID.
+                      </p>
+                    </div>
+                    <WorldIdVerify onVerified={() => setWorldIdVerified(true)} />
+                  </div>
                 ) : (
                   <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleClaim} disabled={claiming}
