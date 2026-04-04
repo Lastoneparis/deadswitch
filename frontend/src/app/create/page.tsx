@@ -106,7 +106,7 @@ export default function CreateVaultPage() {
 
       setDeployTxHash(hash);
 
-      // Register in backend database (with vault_address to be filled after confirmation)
+      // Register in backend database with nullifier + tx hash
       try {
         await createVault({
           owner_address: address,
@@ -114,6 +114,8 @@ export default function CreateVaultPage() {
           heartbeat_interval: interval * 86400,
           balance: parseFloat(amount),
           beneficiary_ens: beneficiaryEns,
+          world_id_nullifier: worldIdNullifier,
+          vault_address: hash, // tx hash now, contract address resolved later
         });
       } catch { /* backend registration - non-blocking */ }
 

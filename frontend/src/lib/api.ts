@@ -55,6 +55,8 @@ export async function createVault(data: {
   balance: number;
   owner_ens?: string;
   beneficiary_ens?: string;
+  world_id_nullifier?: string;
+  vault_address?: string;
 }) {
   return request('/vault/create', {
     method: 'POST',

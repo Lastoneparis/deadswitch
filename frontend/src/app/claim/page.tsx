@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Shield, Siren, CheckCircle, Coins, User, Clock, Loader2, Wallet, AlertTriangle } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract } from 'wagmi';
+import { VAULT_DEPLOY_ABI } from '@/lib/contract';
 import WorldIdVerify from '@/components/WorldIdVerify';
 import Confetti from '@/components/Confetti';
 import { getVault, getHeirVaults, claimInheritance, searchVaultsByAddress, resolveENS, VaultData } from '@/lib/api';
@@ -22,6 +23,7 @@ export default function ClaimPage() {
   const [claimed, setClaimed] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loadingHeir, setLoadingHeir] = useState(false);
+  const { writeContractAsync } = useWriteContract();
 
   // Auto-fetch vaults where connected wallet is beneficiary
   useEffect(() => {
@@ -91,12 +93,24 @@ export default function ClaimPage() {
   const handleClaim = async () => {
     if (!vault || !isConnected || !address) return;
     setClaiming(true);
-    try {
-      await claimInheritance(vault.id, address);
-    } catch {
-      // demo fallback
+
+    // Execute on-chain claim if vault has contract address + nullifier
+    if (vault.vault_address && vault.world_id_nullifier) {
+      try {
+        await writeContractAsync({
+          address: vault.vault_address as `0x${string}`,
+          abi: VAULT_DEPLOY_ABI,
+          functionName: 'claim',
+          args: [vault.world_id_nullifier as `0x${string}`],
+        });
+      } catch (err) {
+        console.warn('On-chain claim failed:', err);
+      }
     }
-    await new Promise((r) => setTimeout(r, 2000));
+
+    // Backend claim
+    try { await claimInheritance(vault.id, address); } catch { /* fallback */ }
+
     setClaiming(false);
     setClaimed(true);
     setShowConfetti(true);

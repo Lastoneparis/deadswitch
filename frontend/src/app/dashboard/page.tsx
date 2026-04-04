@@ -350,6 +350,22 @@ export default function DashboardPage() {
   const handleSimulateDeath = useCallback(async () => {
     if (!vault) return;
 
+    // Try on-chain performUpkeep (will revert if heartbeat not expired — expected for demo)
+    if (isConnected && vault.vault_address) {
+      try {
+        const hash = await writeContractAsync({
+          address: vault.vault_address as `0x${string}`,
+          abi: VAULT_DEPLOY_ABI,
+          functionName: 'performUpkeep',
+          args: ['0x' as `0x${string}`],
+        });
+        addTx(hash, 'Recovery');
+      } catch {
+        // Expected: heartbeat not expired yet. Backend simulate-death handles this for demo.
+      }
+    }
+
+    // Backend fast-forward (sets status to recovery in DB)
     try { await simulateDeath(vault.id); } catch { /* demo */ }
 
     showFeedback(t('dash.recovery_activated'), 'danger');
@@ -372,20 +388,20 @@ export default function DashboardPage() {
   const handleClaim = useCallback(async () => {
     if (!vault || !address) return;
 
-    // Try on-chain claim
-    if (isConnected && vault.vault_address) {
+    // On-chain claim with the real nullifier stored during vault creation
+    if (isConnected && vault.vault_address && vault.world_id_nullifier) {
       try {
-        const nullifierHash = '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`;
         const hash = await writeContractAsync({
           address: vault.vault_address as `0x${string}`,
           abi: VAULT_DEPLOY_ABI,
           functionName: 'claim',
-          args: [nullifierHash],
+          args: [vault.world_id_nullifier as `0x${string}`],
         });
         addTx(hash, 'Claim');
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.warn('On-chain claim failed:', errMsg);
+        setOnChainMessage(`On-chain claim failed: ${errMsg.slice(0, 100)}`);
       }
     }
 
