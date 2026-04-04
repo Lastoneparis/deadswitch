@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccount } from 'wagmi';
-import { Wallet, User, Clock, Coins, CheckCircle, ArrowRight, ArrowLeft, Shield, Loader2 } from 'lucide-react';
+import {
+  Wallet, User, Clock, Coins, CheckCircle, ArrowRight, ArrowLeft, Shield,
+  Loader2, AlertTriangle, ExternalLink, XCircle
+} from 'lucide-react';
 import { createVault, resolveENS } from '@/lib/api';
 import Link from 'next/link';
 
@@ -23,12 +26,48 @@ export default function CreateVaultPage() {
   const [deployed, setDeployed] = useState(false);
   const [vaultAddress, setVaultAddress] = useState('');
 
+  // ENS resolution state
+  const [ensStatus, setEnsStatus] = useState<'idle' | 'resolving' | 'resolved' | 'not_found' | 'error'>('idle');
+  const [ensResolved, setEnsResolved] = useState<{ address: string; name: string } | null>(null);
+
   const totalSteps = 5;
+
+  // Live ENS resolution with debounce
+  useEffect(() => {
+    if (!beneficiary.endsWith('.eth') || beneficiary.length < 5) {
+      setEnsStatus('idle');
+      setEnsResolved(null);
+      return;
+    }
+
+    setEnsStatus('resolving');
+    const timeout = setTimeout(async () => {
+      try {
+        const result = await resolveENS(beneficiary);
+        if (result.resolved) {
+          setEnsStatus('resolved');
+          setEnsResolved({ address: result.address, name: result.name });
+        } else {
+          setEnsStatus('not_found');
+          setEnsResolved(null);
+        }
+      } catch {
+        setEnsStatus('error');
+        setEnsResolved(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [beneficiary]);
 
   const canProceed = () => {
     switch (step) {
       case 1: return isConnected;
-      case 2: return beneficiary.length > 0;
+      case 2: {
+        // Valid if: resolved ENS, or valid 0x address
+        if (beneficiary.endsWith('.eth')) return ensStatus === 'resolved';
+        return beneficiary.startsWith('0x') && beneficiary.length >= 42;
+      }
       case 3: return interval > 0;
       case 4: return parseFloat(amount) > 0;
       case 5: return true;
@@ -40,18 +79,9 @@ export default function CreateVaultPage() {
     if (!address || !isConnected) return;
     setDeploying(true);
     try {
-      // Resolve ENS if needed
-      let beneficiaryAddr = beneficiary;
-      let beneficiaryEns: string | undefined;
-      if (beneficiary.endsWith('.eth')) {
-        try {
-          const resolved = await resolveENS(beneficiary);
-          if (resolved.resolved) {
-            beneficiaryAddr = resolved.address;
-            beneficiaryEns = beneficiary;
-          }
-        } catch { /* use raw input */ }
-      }
+      // Use resolved ENS address if available
+      const beneficiaryAddr = ensResolved?.address || beneficiary;
+      const beneficiaryEns = ensResolved?.name || (beneficiary.endsWith('.eth') ? beneficiary : undefined);
 
       const result = await createVault({
         owner_address: address,
@@ -60,7 +90,7 @@ export default function CreateVaultPage() {
         balance: parseFloat(amount),
         beneficiary_ens: beneficiaryEns,
       });
-      setVaultAddress(result.vaultAddress || '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+      setVaultAddress(result.vaultAddress || result.vault?.id || '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
       setDeployed(true);
     } catch {
       // Mock success for hackathon demo
@@ -165,13 +195,78 @@ export default function CreateVaultPage() {
                   <p className="text-sm text-muted">Who should inherit your funds?</p>
                 </div>
               </div>
-              <input
-                type="text"
-                placeholder="0x... or ENS name (e.g., wife.eth)"
-                value={beneficiary}
-                onChange={(e) => setBeneficiary(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:outline-none text-sm font-mono"
-              />
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="0x... or ENS name (e.g., vitalik.eth)"
+                  value={beneficiary}
+                  onChange={(e) => setBeneficiary(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl bg-background border focus:outline-none text-sm font-mono transition-colors ${
+                    ensStatus === 'resolved' ? 'border-success focus:border-success' :
+                    ensStatus === 'not_found' ? 'border-danger focus:border-danger' :
+                    'border-border focus:border-primary'
+                  }`}
+                />
+
+                {/* ENS resolution feedback */}
+                <AnimatePresence mode="wait">
+                  {ensStatus === 'resolving' && (
+                    <motion.div key="resolving" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                      <Loader2 size={14} className="text-primary animate-spin" />
+                      <span className="text-xs text-primary">Resolving {beneficiary}...</span>
+                    </motion.div>
+                  )}
+
+                  {ensStatus === 'resolved' && ensResolved && (
+                    <motion.div key="resolved" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20">
+                      <CheckCircle size={14} className="text-success" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs text-success font-medium">{ensResolved.name} resolved</span>
+                        <p className="text-[11px] text-muted font-mono truncate">{ensResolved.address}</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {ensStatus === 'not_found' && (
+                    <motion.div key="not_found" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="px-3 py-3 rounded-lg bg-danger/10 border border-danger/20 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <XCircle size={14} className="text-danger" />
+                        <span className="text-xs text-danger font-medium">ENS name not found</span>
+                      </div>
+                      <p className="text-[11px] text-muted">
+                        "{beneficiary}" doesn't resolve to any address. Check the spelling or use a wallet address (0x...) instead.
+                      </p>
+                      <a
+                        href="https://app.ens.domains"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      >
+                        Register an ENS name <ExternalLink size={10} />
+                      </a>
+                    </motion.div>
+                  )}
+
+                  {ensStatus === 'error' && (
+                    <motion.div key="error" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/20">
+                      <AlertTriangle size={14} className="text-warning" />
+                      <span className="text-xs text-warning">Could not resolve ENS. Try a 0x address instead.</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Hint for address format */}
+                {beneficiary.length > 0 && !beneficiary.endsWith('.eth') && !beneficiary.startsWith('0x') && (
+                  <p className="text-[11px] text-warning flex items-center gap-1">
+                    <AlertTriangle size={10} />
+                    Enter a wallet address (0x...) or ENS name (name.eth)
+                  </p>
+                )}
+              </div>
             </>
           )}
 
@@ -252,7 +347,16 @@ export default function CreateVaultPage() {
                 </div>
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-sm text-subtle">Beneficiary</span>
-                  <span className="text-sm font-mono">{beneficiary}</span>
+                  <div className="text-right">
+                    {ensResolved ? (
+                      <>
+                        <span className="text-sm font-semibold">{ensResolved.name}</span>
+                        <p className="text-[11px] text-muted font-mono">{ensResolved.address.slice(0, 10)}...{ensResolved.address.slice(-6)}</p>
+                      </>
+                    ) : (
+                      <span className="text-sm font-mono">{beneficiary}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-sm text-subtle">Heartbeat</span>
