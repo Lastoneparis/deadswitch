@@ -131,7 +131,7 @@ export default function Home() {
             Chainlink is the core trigger mechanism for DeadSwitch. My contract implements <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">AutomationCompatibleInterface</code> with <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">checkUpkeep</code> and <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">performUpkeep</code> — making real state changes on-chain. When an owner stops heartbeating, Chainlink's keeper network calls <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">performUpkeep</code> which flips the vault status to RecoveryMode on-chain. No server. No cron job. No single point of failure.
           </p>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-3 pt-2 mb-6">
             <a
               href="https://automation.chain.link/sepolia/87279356538326214029017935707370766485868215829937943885304798493436723241100"
               target="_blank"
@@ -151,6 +151,41 @@ export default function Home() {
               View contract source
               <ExternalLink size={10} className="text-subtle" />
             </a>
+          </div>
+
+          {/* FAQ */}
+          <div className="space-y-2 pt-4 border-t border-border/50">
+            <p className="text-[11px] text-subtle uppercase tracking-[0.15em] mb-2">Chainlink FAQ</p>
+
+            <details className="group bg-card/30 border border-border rounded-lg">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium flex items-center justify-between">
+                <span>Why is my upkeep history empty?</span>
+                <span className="text-subtle text-xs group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="px-4 pb-4 text-xs text-muted leading-relaxed border-t border-border/50 pt-3">
+                The history only records <code className="text-primary text-[11px] bg-background px-1 rounded">performUpkeep</code> executions — i.e. when Chainlink keepers trigger state change. Since the test vault's heartbeat is still valid, <code className="text-primary text-[11px] bg-background px-1 rounded">checkUpkeep</code> keeps returning false, so no execution has happened. That's correct behavior — no execution = no LINK consumed. Keepers will call <code className="text-primary text-[11px] bg-background px-1 rounded">performUpkeep</code> only when the heartbeat deadline passes.
+              </div>
+            </details>
+
+            <details className="group bg-card/30 border border-border rounded-lg">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium flex items-center justify-between">
+                <span>Why Chainlink Automation instead of a server cron job?</span>
+                <span className="text-subtle text-xs group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="px-4 pb-4 text-xs text-muted leading-relaxed border-t border-border/50 pt-3">
+                A server cron is centralized — if I die, who pays the server bill? Chainlink's keeper network is decentralized infrastructure that outlives any single party. My users' inheritance transfers don't depend on me being alive or my company existing. This is the core reason dead man's switches NEED decentralized automation: the timer must keep running without me.
+              </div>
+            </details>
+
+            <details className="group bg-card/30 border border-border rounded-lg">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium flex items-center justify-between">
+                <span>How does Chainlink modify my contract state?</span>
+                <span className="text-subtle text-xs group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="px-4 pb-4 text-xs text-muted leading-relaxed border-t border-border/50 pt-3">
+                My contract implements <code className="text-primary text-[11px] bg-background px-1 rounded">AutomationCompatibleInterface</code>. Keepers poll <code className="text-primary text-[11px] bg-background px-1 rounded">checkUpkeep()</code> which returns true when <code className="text-primary text-[11px] bg-background px-1 rounded">block.timestamp {'>'}  lastHeartbeat + heartbeatInterval</code>. When true, keepers call <code className="text-primary text-[11px] bg-background px-1 rounded">performUpkeep()</code> which sets <code className="text-primary text-[11px] bg-background px-1 rounded">status = RecoveryMode</code>, records the activation timestamp, and emits an event. That's real state change on-chain — triggered by Chainlink, executed by the smart contract, not by a frontend or server.
+              </div>
+            </details>
           </div>
         </div>
       </section>
