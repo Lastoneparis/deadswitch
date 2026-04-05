@@ -113,6 +113,49 @@ export default function Home() {
       </section>
 
       {/* ═══════════════════════════════
+          CHAINLINK — core trigger mechanism
+          ═══════════════════════════════ */}
+      <section className="max-w-4xl mx-auto">
+        <div className="border border-border rounded-2xl p-8 sm:p-10 bg-gradient-to-br from-[#375BD2]/5 to-transparent">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-[#375BD2]/15 flex items-center justify-center">
+              <Zap size={20} className="text-[#375BD2]" />
+            </div>
+            <div>
+              <p className="text-[11px] text-subtle uppercase tracking-[0.2em]">Powered by</p>
+              <h3 className="text-xl font-bold">Chainlink Automation</h3>
+            </div>
+          </div>
+
+          <p className="text-muted leading-relaxed mb-4">
+            Chainlink is the core trigger mechanism for DeadSwitch. My contract implements <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">AutomationCompatibleInterface</code> with <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">checkUpkeep</code> and <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">performUpkeep</code> — making real state changes on-chain. When an owner stops heartbeating, Chainlink's keeper network calls <code className="text-primary text-sm bg-card px-1.5 py-0.5 rounded">performUpkeep</code> which flips the vault status to RecoveryMode on-chain. No server. No cron job. No single point of failure.
+          </p>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <a
+              href="https://automation.chain.link/sepolia/87279356538326214029017935707370766485868215829937943885304798493436723241100"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border hover:border-primary/40 text-xs font-medium transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              Live upkeep · 2.1 LINK funded
+              <ExternalLink size={10} className="text-subtle" />
+            </a>
+            <a
+              href="https://sepolia.etherscan.io/address/0xF957cDA1f676B9EAE65Ab99982CAa3a31A193CB7#code"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border hover:border-primary/40 text-xs font-medium transition-colors"
+            >
+              View contract source
+              <ExternalLink size={10} className="text-subtle" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════
           HOW IT WORKS — 3 steps, left-aligned
           ═══════════════════════════════ */}
       <section className="max-w-4xl mx-auto">
