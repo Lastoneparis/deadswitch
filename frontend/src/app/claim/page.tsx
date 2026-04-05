@@ -90,9 +90,13 @@ export default function ClaimPage() {
     setSearching(false);
   };
 
+  const [claimError, setClaimError] = useState('');
   const handleClaim = async () => {
     if (!vault || !isConnected || !address) return;
     setClaiming(true);
+    setClaimError('');
+
+    let onChainSuccess = false;
 
     // Execute on-chain claim if vault has contract address + nullifier
     if (vault.vault_address && vault.world_id_nullifier) {
@@ -103,18 +107,46 @@ export default function ClaimPage() {
           functionName: 'claim',
           args: [vault.world_id_nullifier as `0x${string}`],
         });
-      } catch (err) {
-        console.warn('On-chain claim failed:', err);
+        onChainSuccess = true;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('On-chain claim failed:', errMsg);
+        setClaiming(false);
+
+        if (errMsg.includes('User rejected') || errMsg.includes('User denied') || errMsg.includes('rejected the request')) {
+          setClaimError('Transaction rejected in wallet');
+          return;
+        }
+        if (errMsg.includes('insufficient funds')) {
+          setClaimError('Insufficient Sepolia ETH for gas');
+          return;
+        }
+        if (errMsg.includes('Recovery delay not elapsed')) {
+          setClaimError('30-day recovery delay not yet passed (production safety feature)');
+          return;
+        }
+        if (errMsg.includes('Not beneficiary')) {
+          setClaimError('This wallet is not the designated beneficiary');
+          return;
+        }
+        if (errMsg.includes('Vault not in recovery mode')) {
+          setClaimError('Vault is not in recovery mode yet');
+          return;
+        }
+        setClaimError(`On-chain claim failed: ${errMsg.slice(0, 100)}`);
+        return;
       }
     }
 
-    // Backend claim
+    // Backend claim — only after on-chain succeeded OR no on-chain contract
     try { await claimInheritance(vault.id, address); } catch { /* fallback */ }
 
     setClaiming(false);
     setClaimed(true);
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 100);
+    if (onChainSuccess) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 100);
+    }
   };
 
   const beneficiaryLabel = vault?.beneficiary_ens || (vault?.beneficiary_address ? `${vault.beneficiary_address.slice(0, 8)}...${vault.beneficiary_address.slice(-6)}` : '');
@@ -337,6 +369,12 @@ export default function ClaimPage() {
                       <>{t('claim.btn')} ({vault.balance} ETH)</>
                     )}
                   </motion.button>
+                )}
+                {claimError && (
+                  <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20 mt-3">
+                    <AlertTriangle size={14} className="text-danger mt-0.5 shrink-0" />
+                    <p className="text-sm text-danger">{claimError}</p>
+                  </div>
                 )}
               </div>
             ) : null}

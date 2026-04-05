@@ -328,24 +328,46 @@ export default function DashboardPage() {
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.warn('On-chain heartbeat failed:', errMsg);
+
+        // User explicitly rejected — show error, don't proceed
+        if (errMsg.includes('User rejected') || errMsg.includes('User denied') || errMsg.includes('rejected the request')) {
+          showFeedback('Transaction rejected in wallet', 'warning');
+          return;
+        }
+        // Insufficient funds
+        if (errMsg.includes('insufficient funds')) {
+          showFeedback('Insufficient Sepolia ETH for gas', 'danger');
+          return;
+        }
+        // Contract revert — show specific message
+        if (errMsg.includes('Vault not active')) {
+          showFeedback('Vault is not in active state', 'danger');
+          return;
+        }
+        // Other on-chain error — show warning but still update backend for demo
+        setOnChainMessage(`On-chain heartbeat failed: ${errMsg.slice(0, 100)}`);
       }
     }
 
-    // Send to backend
+    // Send to backend (only if not bailed out above)
     try {
       await sendHeartbeat(vault.id, txHash);
     } catch { /* demo */ }
 
     setTimeline((prev) => [
-      { type: 'heartbeat', date: now, description: txHash ? `On-chain (tx: ${txHash.slice(0, 10)}...)` : 'Heartbeat confirmed' },
+      { type: 'heartbeat', date: now, description: txHash ? `On-chain (tx: ${txHash.slice(0, 10)}...)` : 'Heartbeat (backend only)' },
       ...prev,
     ]);
 
-    showFeedback(t('dash.alive_confirmed'), 'success');
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 100);
+    if (txHash) {
+      showFeedback(t('dash.alive_confirmed'), 'success');
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 100);
+    } else {
+      showFeedback('Heartbeat recorded (demo mode — no on-chain tx)', 'warning');
+    }
     await refreshVault();
-  }, [vault, isConnected, address, writeContractAsync, addTx, showFeedback, refreshVault]);
+  }, [vault, isConnected, address, writeContractAsync, addTx, showFeedback, refreshVault, t]);
 
   const handleSimulateDeath = useCallback(async () => {
     if (!vault) return;
@@ -360,8 +382,14 @@ export default function DashboardPage() {
           args: ['0x' as `0x${string}`],
         });
         addTx(hash, 'Recovery');
-      } catch {
-        // Expected: heartbeat not expired yet. Backend simulate-death handles this for demo.
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // If user explicitly rejected, don't proceed with backend fallback
+        if (errMsg.includes('User rejected') || errMsg.includes('User denied') || errMsg.includes('rejected the request')) {
+          showFeedback('Transaction rejected in wallet', 'warning');
+          return;
+        }
+        // Other errors (including "Heartbeat not expired") — continue with backend for demo
       }
     }
 
@@ -412,9 +440,12 @@ export default function DashboardPage() {
           onChainError = 'Only the beneficiary wallet can claim. Switch to the heir\'s wallet.';
         } else if (errMsg.includes('Vault not in recovery mode')) {
           onChainError = 'Vault not in recovery mode yet. Run Simulate Death first.';
-        } else if (errMsg.includes('User rejected')) {
-          onChainError = 'Transaction rejected in wallet.';
-          return; // Don't show demo success if user rejected
+        } else if (errMsg.includes('User rejected') || errMsg.includes('User denied') || errMsg.includes('rejected the request')) {
+          showFeedback('Transaction rejected in wallet', 'warning');
+          return; // Don't show success or update state
+        } else if (errMsg.includes('insufficient funds')) {
+          showFeedback('Insufficient Sepolia ETH for gas', 'danger');
+          return;
         } else {
           onChainError = `On-chain claim failed: ${errMsg.slice(0, 120)}`;
         }
@@ -422,15 +453,15 @@ export default function DashboardPage() {
       }
     }
 
-    // Backend claim (for demo UI state — does not transfer ETH)
+    // Backend claim (only fires if user didn't reject on-chain)
     try { await claimInheritance(vault.id, address); } catch { /* demo */ }
 
     setClaimSuccess(true);
-    setShowConfetti(true);
     if (onChainSuccess) {
+      setShowConfetti(true);
       showFeedback(`✓ ${vault.balance} ETH transferred on-chain`, 'success');
     } else {
-      showFeedback(`Demo claim (no on-chain transfer — see details)`, 'warning');
+      showFeedback(`Demo claim (on-chain reverted — see details below)`, 'warning');
     }
     setTimeout(() => setShowConfetti(false), 100);
     setTimeline((prev) => [
@@ -885,6 +916,7 @@ export default function DashboardPage() {
                           if (!confirm('Are you sure you want to cancel this vault? Your funds will be returned and the beneficiary will lose access.')) return;
                           try {
                             // On-chain cancel if vault has contract address
+                            let onChainCancelled = false;
                             if (vault.vault_address) {
                               try {
                                 const hash = await writeContractAsync({
@@ -893,12 +925,25 @@ export default function DashboardPage() {
                                   functionName: 'cancel',
                                 });
                                 addTx(hash, 'Cancel');
-                              } catch (err) {
-                                console.warn('On-chain cancel failed:', err);
+                                onChainCancelled = true;
+                              } catch (err: unknown) {
+                                const errMsg = err instanceof Error ? err.message : String(err);
+                                console.warn('On-chain cancel failed:', errMsg);
+                                if (errMsg.includes('User rejected') || errMsg.includes('User denied') || errMsg.includes('rejected the request')) {
+                                  showFeedback('Transaction rejected in wallet', 'warning');
+                                  return;
+                                }
+                                if (errMsg.includes('insufficient funds')) {
+                                  showFeedback('Insufficient Sepolia ETH for gas', 'danger');
+                                  return;
+                                }
+                                // Contract revert — don't proceed to backend
+                                showFeedback(`On-chain cancel failed: ${errMsg.slice(0, 80)}`, 'danger');
+                                return;
                               }
                             }
                             await cancelVault(vault.id, address!);
-                            showFeedback('Vault cancelled — funds returned', 'warning');
+                            showFeedback(onChainCancelled ? '✓ Vault cancelled on-chain — funds returned' : 'Vault cancelled (backend only)', onChainCancelled ? 'success' : 'warning');
                             await refreshVault();
                           } catch {
                             showFeedback('Failed to cancel vault', 'danger');
