@@ -36,9 +36,17 @@ export default function CreateVaultPage() {
 
   const totalSteps = 5;
 
+  // Detect any ENS-compatible name (native .eth + DNS integration)
+  const isEnsLikeName = (name: string): boolean => {
+    if (name.length < 5 || !name.includes('.')) return false;
+    // Native ENS (on-chain) + common DNS-integrated TLDs
+    const supportedTlds = ['.eth', '.xyz', '.com', '.org', '.io', '.art', '.luxe', '.kred', '.club'];
+    return supportedTlds.some(tld => name.endsWith(tld));
+  };
+
   // Live ENS resolution with debounce
   useEffect(() => {
-    if (!beneficiary.endsWith('.eth') || beneficiary.length < 5) {
+    if (!isEnsLikeName(beneficiary)) {
       setEnsStatus('idle');
       setEnsResolved(null);
       return;
@@ -69,7 +77,7 @@ export default function CreateVaultPage() {
       case 1: return isConnected;
       case 2: {
         // Valid if: resolved ENS, or valid 0x address
-        if (beneficiary.endsWith('.eth')) return ensStatus === 'resolved';
+        if (isEnsLikeName(beneficiary)) return ensStatus === 'resolved';
         return beneficiary.startsWith('0x') && beneficiary.length >= 42;
       }
       case 3: return interval > 0;
@@ -119,7 +127,7 @@ export default function CreateVaultPage() {
 
     setDeploying(true);
     try {
-      const beneficiaryEns = ensResolved?.name || (beneficiary.endsWith('.eth') ? beneficiary : undefined);
+      const beneficiaryEns = ensResolved?.name || (isEnsLikeName(beneficiary) ? beneficiary : undefined);
       const heartbeatSecs = BigInt(interval * 86400);
       const worldIdNullifier = keccak256(toBytes(`deadswitch-${address}-${beneficiaryAddr}`));
       const depositWei = parseEther(amount);
@@ -307,7 +315,7 @@ export default function CreateVaultPage() {
               <div className="space-y-3">
                 <input
                   type="text"
-                  placeholder="0x... or ENS name (e.g., vitalik.eth)"
+                  placeholder="0x... or ENS name (e.g., vitalik.eth, name.xyz)"
                   value={beneficiary}
                   onChange={(e) => setBeneficiary(e.target.value)}
                   className={`w-full px-4 py-3 rounded-xl bg-background border focus:outline-none text-sm font-mono transition-colors ${
@@ -369,10 +377,10 @@ export default function CreateVaultPage() {
                 </AnimatePresence>
 
                 {/* Hint for address format */}
-                {beneficiary.length > 0 && !beneficiary.endsWith('.eth') && !beneficiary.startsWith('0x') && (
+                {beneficiary.length > 0 && !isEnsLikeName(beneficiary) && !beneficiary.startsWith('0x') && (
                   <p className="text-[11px] text-warning flex items-center gap-1">
                     <AlertTriangle size={10} />
-                    Enter a wallet address (0x...) or ENS name (name.eth)
+                    Enter a wallet address (0x...) or ENS name (name.eth / name.xyz / name.com)
                   </p>
                 )}
               </div>
